@@ -3,7 +3,7 @@ import {
   useMutation as useConvexMutation,
   useQuery as _unused,
 } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "convex_generated/api";
 import { useApp } from "@/contexts/AppContext";
 
 interface Affiliate {

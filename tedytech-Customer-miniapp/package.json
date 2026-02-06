@@ -6,7 +6,7 @@
   ],
   "scripts": {
     "install:all": "npm install",
-    "dev": "npm --workspace customer-app run dev",
-    "build": "npm --workspace customer-app run build"
+    "dev": "cd customer-app && npm run dev",
+    "build": "cd customer-app && npm run build"
   }
 }

@@ -1,5 +1,5 @@
 import { useQuery as useConvexQuery } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "convex_generated/api";
 import { phones as localPhones } from "@/data/products";
 import type { Phone, PhoneDetail } from "@/types/phone";
 

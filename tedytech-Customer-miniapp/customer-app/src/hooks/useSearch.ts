@@ -2,7 +2,7 @@ import {
   useQuery as useConvexQuery,
   useMutation as useConvexMutation,
 } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "convex_generated/api";
 
 interface SearchPanelData {
   hot_searches: { term: string; label: string }[];

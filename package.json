@@ -1,5 +1,13 @@
 {
+  "private": true,
+  "workspaces": [
+    "tedytech-Customer-miniapp"
+  ],
   "dependencies": {
     "convex": "^1.31.6"
+  },
+  "scripts": {
+    "install:all": "npm install --workspaces",
+    "build": "npm --workspace=tedytech-Customer-miniapp run build"
   }
 }

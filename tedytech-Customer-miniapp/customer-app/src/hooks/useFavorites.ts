@@ -2,7 +2,7 @@ import {
   useQuery as useConvexQuery,
   useMutation as useConvexMutation,
 } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "convex_generated/api";
 import type { Phone } from "@/types/phone";
 import { toast } from "@/hooks/use-toast";
 import { phones as localPhones } from "@/data/products";

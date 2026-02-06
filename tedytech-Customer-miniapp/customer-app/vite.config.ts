@@ -19,11 +19,17 @@ export default defineConfig(async ({ mode }) => {
     server: {
       host: "::",
       port: 8080,
+      fs: {
+        // Allow serving files from the repository root (for shared `convex/` folder)
+        allow: [path.resolve(__dirname, "..")],
+      },
     },
     plugins,
     resolve: {
       alias: {
         "@": path.resolve(__dirname, "./src"),
+        // Alias to the shared convex generated client in the repo root
+        convex_generated: path.resolve(__dirname, "../../convex/_generated"),
       },
     },
   };
