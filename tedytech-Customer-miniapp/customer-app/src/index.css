@@ -1,0 +1,273 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark slate/charcoal theme */
+    --background: 220 20% 10%;
+    --foreground: 210 40% 95%;
+
+    --card: 220 18% 14%;
+    --card-foreground: 210 40% 95%;
+
+    --popover: 220 18% 14%;
+    --popover-foreground: 210 40% 95%;
+
+    --primary: 210 100% 40%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 210 100% 50%;
+    --primary-deep: 210 100% 40%;
+
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 210 40% 95%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 215 20% 60%;
+
+    --accent: 43 96% 56%;
+    --accent-foreground: 220 20% 10%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 22%;
+    --input: 220 15% 22%;
+    --ring: 210 100% 50%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens for TedyTech */
+    --surface: 220 18% 14%;
+    --surface-elevated: 220 18% 18%;
+    --surface-section: 220 18% 16%;
+    --text-primary: 210 40% 95%;
+    --text-secondary: 215 20% 65%;
+    --text-tertiary: 215 15% 50%;
+    --blue-soft: 210 100% 50%;
+    --blue-light: 210 80% 20%;
+    --blue-vibrant: 210 100% 60%;
+    --blue-electric: 210 100% 55%;
+    --blue-muted: 210 45% 35%;
+    --blue-muted-foreground: 210 40% 95%;
+    --gold: 43 96% 56%;
+    --gold-light: 43 80% 25%;
+    --success: 145 70% 32%;
+    --success-light: 145 40% 20%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.2);
+    --shadow-md: 0 4px 12px 0 hsl(0 0% 0% / 0.3);
+    --shadow-lg: 0 8px 24px 0 hsl(0 0% 0% / 0.4);
+
+    --sidebar-background: 220 18% 12%;
+    --sidebar-foreground: 210 40% 95%;
+    --sidebar-primary: 210 100% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 43 96% 56%;
+    --sidebar-accent-foreground: 220 20% 10%;
+    --sidebar-border: 220 15% 22%;
+    --sidebar-ring: 210 100% 50%;
+  }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 12%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 222 47% 30%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 222 30% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 222 30% 18%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 43 96% 56%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 222 30% 20%;
+    --input: 222 30% 20%;
+    --ring: 222 47% 30%;
+
+    --surface: 222 47% 12%;
+    --surface-elevated: 222 47% 15%;
+    --surface-section: 222 47% 14%;
+    --text-primary: 210 40% 98%;
+    --text-secondary: 215 20% 70%;
+    --text-tertiary: 215 15% 55%;
+    --blue-light: 222 40% 20%;
+    --gold: 43 96% 56%;
+    --gold-light: 43 80% 25%;
+    --success-light: 145 40% 20%;
+    --warning-foreground: 222 47% 11%;
+
+    --sidebar-background: 222 47% 10%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 222 47% 30%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 43 96% 56%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 222 30% 18%;
+    --sidebar-ring: 222 47% 30%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply text-foreground font-sans antialiased bg-background;
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .card-shadow {
+    box-shadow:
+      0 2px 8px -2px hsl(220 20% 10% / 0.08),
+      0 1px 2px hsl(220 20% 10% / 0.04);
+  }
+
+  .card-shadow-sm {
+    box-shadow: var(--shadow-sm);
+  }
+
+  .card-shadow-lg {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .text-price {
+    @apply text-foreground font-bold;
+  }
+
+  /* Page transition wrapper */
+  .page-transition {
+    @apply animate-fade-in;
+  }
+
+  /* Stagger animation delays for lists */
+  .stagger-1 {
+    animation-delay: 0.05s;
+  }
+  .stagger-2 {
+    animation-delay: 0.1s;
+  }
+  .stagger-3 {
+    animation-delay: 0.15s;
+  }
+  .stagger-4 {
+    animation-delay: 0.2s;
+  }
+  .stagger-5 {
+    animation-delay: 0.25s;
+  }
+  .stagger-6 {
+    animation-delay: 0.3s;
+  }
+
+  /* Interactive hover effects */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out;
+  }
+  .hover-lift:hover {
+    @apply -translate-y-1;
+    box-shadow: 0 12px 28px -8px hsl(220 20% 10% / 0.15);
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200 ease-out;
+  }
+  .hover-scale:hover {
+    @apply scale-105;
+  }
+
+  .hover-glow {
+    @apply transition-all duration-300;
+  }
+  .hover-glow:hover {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+  }
+
+  /* Premium button glow */
+  .btn-glow {
+    box-shadow: 0 4px 14px 0 hsl(var(--primary) / 0.35);
+  }
+  .btn-glow:hover {
+    box-shadow: 0 6px 20px 0 hsl(var(--primary) / 0.45);
+  }
+
+  /* Enhanced icon styling */
+  .icon-premium {
+    @apply transition-all duration-200;
+    filter: drop-shadow(0 1px 2px hsl(var(--primary) / 0.15));
+  }
+
+  /* Button press effect */
+  .press-effect {
+    @apply transition-transform duration-100 active:scale-95;
+  }
+
+  /* Image zoom on hover */
+  .img-zoom {
+    @apply transition-transform duration-500 ease-out;
+  }
+  .group:hover .img-zoom {
+    @apply scale-110;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200;
+  }
+
+  .chip-primary {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .chip-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+  }
+
+  .chip-outline {
+    @apply border border-border bg-card text-foreground hover:bg-secondary;
+  }
+
+  .bottom-nav-safe {
+    padding-bottom: env(safe-area-inset-bottom, 16px);
+  }
+
+  /* Surface section background */
+  .bg-surface-section {
+    background-color: hsl(var(--surface-section));
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

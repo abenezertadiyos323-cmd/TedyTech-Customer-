@@ -3,7 +3,21 @@
     "allow": [
       "Bash(wc:*)",
       "Bash(npm run build:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm install:*)",
+      "Bash(ls:*)",
+      "Bash(unzip:*)",
+      "Bash(tree:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(gh repo list:*)",
+      "Bash(gh api:*)",
+      "Bash(gh auth status:*)",
+      "Bash(dir:*)",
+      "Bash(xargs -I {} sh -c 'if ls {}/../package.json 2>/dev/null | grep -q \"\"\"\"; then cat {}/../package.json 2>/dev/null | grep -l \"\"tedytalk\\\\|TedyTalk\"\" && echo {}; fi')",
+      "Bash(xargs:*)",
+      "Bash(git clone:*)",
+      "Bash(curl:*)",
+      "Bash(git config:*)"
     ]
   }
 }
