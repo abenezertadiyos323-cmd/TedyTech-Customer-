@@ -1,16 +1,4 @@
 {
-  "name": "tedytech-workspace",
-  "private": true,
-  "workspaces": [
-    "customer-app"
-  ],
-  "scripts": {
-    "install:all": "npm install",
-    "dev": "npm --workspace customer-app run dev",
-    "build": "npm --workspace customer-app run build"
-  }
-}
-{
   "name": "tedytech-customer-miniapp",
   "private": true,
   "version": "1.0.0",
