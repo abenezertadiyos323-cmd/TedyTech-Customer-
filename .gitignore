@@ -6,3 +6,7 @@
 # Ignore Windows reserved device filename and common folders
 nul
 node_modules/
+
+# Ignore generated build outputs for the customer app
+customer-app/dist/
+tedytech-Customer-miniapp/customer-app/dist/

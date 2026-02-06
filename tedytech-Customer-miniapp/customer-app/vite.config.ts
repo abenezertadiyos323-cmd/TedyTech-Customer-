@@ -20,8 +20,11 @@ export default defineConfig(async ({ mode }) => {
       host: "::",
       port: 8080,
       fs: {
-        // Allow serving files from the repository root (for shared `convex/` folder)
-        allow: [path.resolve(__dirname, "..")],
+        // Restrict Vite file serving to only the generated convex client and local node_modules
+        allow: [
+          path.resolve(__dirname, "../../convex/_generated"),
+          path.resolve(__dirname, "node_modules"),
+        ],
       },
     },
     plugins,
