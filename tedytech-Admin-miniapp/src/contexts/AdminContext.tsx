@@ -41,6 +41,11 @@ interface AdminContextType {
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
+const getTelegramWebApp = () => {
+  if (typeof window === "undefined") return undefined;
+  return window.Telegram?.WebApp;
+};
+
 export function AdminProvider({ children }: { children: ReactNode }) {
   // Navigation state.
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
@@ -80,7 +85,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }, 5000);
 
     try {
-      const tg = window.Telegram?.WebApp;
+      const tg = getTelegramWebApp();
 
       if (tg) {
         console.log("[AdminContext] Telegram WebApp detected", {
@@ -166,15 +171,22 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   // Initialize session (can be enhanced with Convex session creation later).
   useEffect(() => {
-    const storedSessionId = localStorage.getItem("tedytech_admin_session_id");
-    if (storedSessionId) {
-      setSessionId(storedSessionId);
-    } else {
-      const newSessionId = `admin_${Date.now()}_${Math.random()
-        .toString(36)
-        .substring(7)}`;
-      localStorage.setItem("tedytech_admin_session_id", newSessionId);
-      setSessionId(newSessionId);
+    try {
+      const storedSessionId = localStorage.getItem("tedytech_admin_session_id");
+      if (storedSessionId) {
+        setSessionId(storedSessionId);
+      } else {
+        const newSessionId = `admin_${Date.now()}_${Math.random()
+          .toString(36)
+          .substring(7)}`;
+        localStorage.setItem("tedytech_admin_session_id", newSessionId);
+        setSessionId(newSessionId);
+      }
+    } catch (error) {
+      console.error("[AdminContext] localStorage is unavailable", error);
+      setWebAppError((prev) =>
+        prev ?? "Local storage is unavailable. Session cannot be persisted.",
+      );
     }
   }, []);
 
@@ -208,8 +220,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       if (!telegramUserId) return;
       if (adminToken) return; // already authenticated.
 
-      const ALLOWED = import.meta.env.VITE_ADMIN_CHAT_ID || "";
-      if (ALLOWED && String(telegramUserId) !== String(ALLOWED)) {
+      const allowed = import.meta.env.VITE_ADMIN_CHAT_ID || "";
+      if (allowed && String(telegramUserId) !== String(allowed)) {
         setIsAuthorized(false);
         return;
       }
@@ -230,14 +242,14 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           return;
         }
 
+        const tg = getTelegramWebApp();
+        const user = (tg as any)?.initDataUnsafe?.user;
+
         const resp = await convex.mutation(authenticateRef, {
           telegramId: String(telegramUserId),
-          username: (window.Telegram?.WebApp as any)?.initDataUnsafe?.user
-            ?.username,
-          firstName: (window.Telegram?.WebApp as any)?.initDataUnsafe?.user
-            ?.first_name,
-          lastName: (window.Telegram?.WebApp as any)?.initDataUnsafe?.user
-            ?.last_name,
+          username: user?.username,
+          firstName: user?.first_name,
+          lastName: user?.last_name,
         });
 
         if (resp && (resp as any).token) {
