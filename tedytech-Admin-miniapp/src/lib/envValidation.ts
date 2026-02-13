@@ -11,7 +11,7 @@ export function validateEnv(): {
   const errors: string[] = [];
 
   // Validate VITE_CONVEX_URL
-  const convexUrl = import.meta.env.VITE_CONVEX_URL;
+  const convexUrl = import.meta.env.VITE_CONVEX_URL?.trim();
   if (!convexUrl) {
     errors.push("VITE_CONVEX_URL is not configured");
   } else if (!convexUrl.startsWith("https://")) {
@@ -19,16 +19,16 @@ export function validateEnv(): {
   }
 
   // Validate VITE_ADMIN_CHAT_ID
-  const adminChatId = import.meta.env.VITE_ADMIN_CHAT_ID;
+  const adminChatId = import.meta.env.VITE_ADMIN_CHAT_ID?.trim();
   if (!adminChatId || adminChatId === "") {
     errors.push(
       "VITE_ADMIN_CHAT_ID is not configured (required for admin authorization)",
     );
   } else if (!/^\d+$/.test(adminChatId)) {
     errors.push(
-      "VITE_ADMIN_CHAT_ID must be a numeric Telegram user ID (found: " +
+      "VITE_ADMIN_CHAT_ID must be a numeric Telegram user ID (found: '" +
         adminChatId +
-        ")",
+        "')",
     );
   }
 
