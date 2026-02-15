@@ -7,14 +7,9 @@ import { formatWaitTime, getLeadPriorityIcon } from "@/lib/utils";
 
 export function useHotLeads(limit: number = 10) {
   const { adminToken } = useAdmin();
-  const actions = useQuery(
-    api.phoneActions.listAllPhoneActions,
-    adminToken ?? "",
-  );
-  const exchanges = useQuery(
-    api.phoneActions.listAllExchangeRequests,
-    adminToken ?? "",
-  );
+  const authArgs = adminToken ? { token: adminToken } : "skip";
+  const actions = useQuery(api.phoneActions.listAllPhoneActions, authArgs);
+  const exchanges = useQuery(api.phoneActions.listAllExchangeRequests, authArgs);
 
   // Combine and score leads
   const hotLeads: HotLead[] = useMemo(() => {

@@ -60,6 +60,7 @@ const diagnostics: StartupDiagnostics = {
 
 let appRoot: Root | null = null;
 const startupErrors = new Set<string>();
+let runtimeFallbackShown = false;
 
 const logInfo = (message: string, details?: unknown) => {
   if (details === undefined) {
@@ -148,8 +149,8 @@ const renderDiagnosticsOverlay = () => {
   const lines: string[] = [
     `${APP_LOG_PREFIX} startup diagnostics`,
     `build_time: ${quote(diagnostics.buildTime)}`,
-    `mode: ${quote(diagnostics.mode)}`,
-    `prod: ${String(diagnostics.prod)}`,
+    `import.meta.env.MODE: ${quote(diagnostics.mode)}`,
+    `import.meta.env.PROD: ${String(diagnostics.prod)}`,
     `VITE_APP_ENVIRONMENT: ${quote(diagnostics.appEnvironment)}`,
     `VITE_CONVEX_URL: ${
       diagnostics.convexUrlExists
@@ -157,7 +158,7 @@ const renderDiagnosticsOverlay = () => {
         : "missing"
     }`,
     `VITE_ADMIN_CHAT_ID: ${diagnostics.adminChatIdExists ? "present" : "missing"}`,
-    `window.Telegram.WebApp: ${diagnostics.telegramWebAppExists ? "present" : "missing"}`,
+    `window.Telegram?.WebApp: ${diagnostics.telegramWebAppExists ? "present" : "missing"}`,
     `convex_ping: ${
       diagnostics.convexPingStatus === "failed"
         ? `failed (${diagnostics.convexPingError})`
@@ -250,6 +251,18 @@ const renderStartupMessage = (
   );
 };
 
+const renderRuntimeFallback = (
+  title: string,
+  message: string,
+  details: RenderErrorDetails,
+) => {
+  if (runtimeFallbackShown) {
+    return;
+  }
+  runtimeFallbackShown = true;
+  renderStartupMessage(title, message, [], details);
+};
+
 const pingConvex = async (convexUrl: string) => {
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), 7000);
@@ -270,12 +283,26 @@ const pingConvex = async (convexUrl: string) => {
 
 const initOverlayErrorHooks = () => {
   window.addEventListener("error", (event) => {
-    appendStartupError(`Uncaught error: ${event.message}`);
+    if (!event.error && !event.message) {
+      return;
+    }
+
+    const formatted = formatError(event.error ?? event.message);
+    appendStartupError(`Uncaught error: ${formatted.message}`);
+    renderRuntimeFallback(
+      "Runtime Error",
+      "The app crashed after initial render.",
+      formatted,
+    );
   });
 
   window.addEventListener("unhandledrejection", (event) => {
-    appendStartupError(
-      `Unhandled rejection: ${formatError(event.reason).message}`,
+    const formatted = formatError(event.reason);
+    appendStartupError(`Unhandled rejection: ${formatted.message}`);
+    renderRuntimeFallback(
+      "Unhandled Promise Error",
+      "A background task failed after startup.",
+      formatted,
     );
   });
 };

@@ -9,10 +9,8 @@ import { mockPhoneActions } from "@/data/mockData";
  */
 export function usePhoneActions() {
   const { adminToken } = useAdmin();
-  const convexActions = useQuery(
-    api.phoneActions.listAllPhoneActions,
-    adminToken ?? "",
-  );
+  const authArgs = adminToken ? { token: adminToken } : "skip";
+  const convexActions = useQuery(api.phoneActions.listAllPhoneActions, authArgs);
 
   // Fallback to mock data if Convex data is unavailable
   const actions = (convexActions ?? mockPhoneActions) as PhoneAction[];

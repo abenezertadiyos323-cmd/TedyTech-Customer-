@@ -9,9 +9,10 @@ import { mockExchangeRequests } from "@/data/mockData";
  */
 export function useExchangeRequests() {
   const { adminToken } = useAdmin();
+  const authArgs = adminToken ? { token: adminToken } : "skip";
   const convexExchanges = useQuery(
     api.phoneActions.listAllExchangeRequests,
-    adminToken ?? "",
+    authArgs,
   );
   const isMockData = convexExchanges === undefined;
 

@@ -22,13 +22,14 @@ function getActionDescription(actionType: string) {
  */
 export function useRecentActivity(limit: number = 20) {
   const { adminToken } = useAdmin();
+  const authArgs = adminToken ? { token: adminToken } : "skip";
   const convexActions = useQuery(
     api.phoneActions.listAllPhoneActions,
-    adminToken ?? "",
+    authArgs,
   );
   const convexExchanges = useQuery(
     api.phoneActions.listAllExchangeRequests,
-    adminToken ?? "",
+    authArgs,
   );
   const convexSearches = useQuery(api.search.listRecentSearches, { limit: 50 });
 
