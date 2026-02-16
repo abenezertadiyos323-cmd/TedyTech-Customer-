@@ -32,7 +32,12 @@
       "Bash(\"tedytech-Admin-miniapp/src/components/dashboard/OfflineIndicator.tsx\" << 'EOF'\nimport { WifiOff } from 'lucide-react';\n\nexport function OfflineIndicator\\(\\) {\n  return \\(\n    <div className=\"mx-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2\">\n      <WifiOff className=\"h-4 w-4 text-yellow-700 flex-shrink-0\" />\n      <p className=\"text-sm text-yellow-800 font-medium\">\n        Offline - Updates paused\n      </p>\n    </div>\n  \\);\n}\nEOF)",
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: Implement Admin Dashboard with Hot Leads prioritization\n\n- Add Hot Leads scoring system \\(🔥🔥🔥, 🔥🔥, 🔥 priority\\)\n- Create useHotLeads hook with intelligent lead scoring\n- Add offline handling infrastructure \\(network status, queue, toast\\)\n- Build Dashboard components with Tailwind styling\n- Implement priority layout: Hot Leads → Orders → Inventory → Stats\n- Add real-time updates via Convex useQuery\n- Create utility functions for wait time and priority icons\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(git commit:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git mv:*)",
+      "Bash(npx convex deploy:*)"
     ]
   }
 }

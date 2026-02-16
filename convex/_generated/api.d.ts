@@ -10,6 +10,7 @@
 
 import type * as affiliates from "../affiliates.js";
 import type * as favorites from "../favorites.js";
+import type * as health from "../health.js";
 import type * as lib_auth_adminAuth from "../lib/auth/adminAuth.js";
 import type * as lib_validators from "../lib/validators.js";
 import type * as mutations_categories from "../mutations/categories.js";
@@ -31,6 +32,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   affiliates: typeof affiliates;
   favorites: typeof favorites;
+  health: typeof health;
   "lib/auth/adminAuth": typeof lib_auth_adminAuth;
   "lib/validators": typeof lib_validators;
   "mutations/categories": typeof mutations_categories;

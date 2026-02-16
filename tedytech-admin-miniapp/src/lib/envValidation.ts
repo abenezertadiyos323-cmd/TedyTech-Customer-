@@ -25,6 +25,14 @@ export const getConvexHostname = (value: string): string => {
   }
 };
 
+const isValidConvexCloudUrl = (value: string): boolean => {
+  const hostname = getConvexHostname(value);
+  if (hostname.endsWith(".convex.cloud")) {
+    return true;
+  }
+  return value.includes("convex.cloud");
+};
+
 export function validateEnv(): EnvValidationResult {
   const errors: string[] = [];
 
@@ -48,9 +56,9 @@ export function validateEnv(): EnvValidationResult {
         `VITE_CONVEX_URL must start with "https://": "${config.VITE_CONVEX_URL}"`,
       );
     }
-    if (!config.VITE_CONVEX_URL.includes("convex.cloud")) {
+    if (!isValidConvexCloudUrl(config.VITE_CONVEX_URL)) {
       errors.push(
-        `VITE_CONVEX_URL must contain "convex.cloud": "${config.VITE_CONVEX_URL}"`,
+        `VITE_CONVEX_URL must use a convex.cloud host: "${config.VITE_CONVEX_URL}"`,
       );
     }
   }

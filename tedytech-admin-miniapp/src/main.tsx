@@ -11,6 +11,8 @@ import {
   ADMIN_QUERY_DEBUG_EVENT,
   type QueryDebugDetail,
 } from "@/lib/queryDebug";
+import { AppWithConvexStatus } from "@/components/AppWithConvexStatus";
+import { api } from "convex_generated/api";
 import App from "./App";
 import "./index.css";
 
@@ -276,21 +278,19 @@ const renderRuntimeFallback = (
   renderStartupMessage(title, message, [], details);
 };
 
-const pingConvex = async (convexUrl: string) => {
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 7000);
+/**
+ * Pings Convex using a real query (health.ping) instead of raw fetch.
+ * This avoids CORS issues in Telegram WebView and provides a true health check.
+ */
+const pingConvex = async (client: ConvexReactClient) => {
   try {
-    await fetch(convexUrl.replace(/\/+$/, ""), {
-      method: "GET",
-      mode: "no-cors",
-      cache: "no-store",
-      signal: controller.signal,
-    });
-    return { ok: true as const };
+    const result = await client.query(api.health.ping, {});
+    if (result && result.status === "ok") {
+      return { ok: true as const };
+    }
+    return { ok: false as const, error: "Health check returned invalid response" };
   } catch (error) {
     return { ok: false as const, error: formatError(error).message };
-  } finally {
-    window.clearTimeout(timeoutId);
   }
 };
 
@@ -402,38 +402,28 @@ const bootstrap = async () => {
     return;
   }
 
+  // Ping Convex with health check query (non-blocking)
   logInfo("Pinging Convex deployment", {
     convexHostname: diagnostics.convexHostname || "invalid",
   });
-  const pingResult = await pingConvex(config.VITE_CONVEX_URL);
+  const pingResult = await pingConvex(convex);
   if (!pingResult.ok) {
     diagnostics.convexPingStatus = "failed";
     diagnostics.convexPingError = pingResult.error;
-    appendStartupError(`Convex ping failed: ${pingResult.error}`);
     renderDiagnosticsOverlay();
-    logError("Convex ping failed", {
+    logError("Convex ping failed (non-blocking)", {
       convexHostname: diagnostics.convexHostname || "invalid",
       error: pingResult.error,
     });
-    renderStartupMessage(
-      "Convex Connection Failed",
-      "Could not reach Convex during startup.",
-      [
-        `Convex hostname: ${quote(diagnostics.convexHostname || "invalid")}`,
-        `Error: ${quote(pingResult.error)}`,
-      ],
-      { message: pingResult.error },
-    );
-    convex.close();
-    return;
+    // Don't block startup - we'll show a banner instead
+  } else {
+    diagnostics.convexPingStatus = "ok";
+    diagnostics.convexPingError = "";
+    renderDiagnosticsOverlay();
+    logInfo("Convex ping succeeded", {
+      convexHostname: diagnostics.convexHostname || "invalid",
+    });
   }
-
-  diagnostics.convexPingStatus = "ok";
-  diagnostics.convexPingError = "";
-  renderDiagnosticsOverlay();
-  logInfo("Convex ping succeeded", {
-    convexHostname: diagnostics.convexHostname || "invalid",
-  });
 
   if (!window.Telegram?.WebApp) {
     appendStartupError("window.Telegram.WebApp is missing");
@@ -458,17 +448,26 @@ const bootstrap = async () => {
     return;
   }
 
-  logInfo("Rendering app");
+  logInfo("Rendering app", {
+    convexPingStatus: diagnostics.convexPingStatus,
+    willShowBanner: !pingResult.ok,
+  });
   getAppRoot().render(
     <React.StrictMode>
       <ErrorBoundary>
         <ConvexProvider client={convex}>
-          <KonstaProvider theme="ios">
-            <AdminProvider>
-              <App />
-              <Toaster position="top-center" />
-            </AdminProvider>
-          </KonstaProvider>
+          <AppWithConvexStatus
+            convexClient={convex}
+            initialPingFailed={!pingResult.ok}
+            initialError={pingResult.ok ? "" : pingResult.error}
+          >
+            <KonstaProvider theme="ios">
+              <AdminProvider>
+                <App />
+                <Toaster position="top-center" />
+              </AdminProvider>
+            </KonstaProvider>
+          </AppWithConvexStatus>
         </ConvexProvider>
       </ErrorBoundary>
     </React.StrictMode>,
