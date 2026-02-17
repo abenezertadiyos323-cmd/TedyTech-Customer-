@@ -18,6 +18,10 @@ export default defineConfig(({ mode }) => {
       alias: {
         "@": path.resolve(__dirname, "./src"),
         convex_generated: path.resolve(__dirname, "../convex/_generated"),
+        // Ensure `convex/server` (imported by the generated api.js outside
+        // this package) resolves to this app's own node_modules, not the
+        // root node_modules which doesn't exist on Vercel.
+        convex: path.resolve(__dirname, "./node_modules/convex"),
       },
     },
   };
