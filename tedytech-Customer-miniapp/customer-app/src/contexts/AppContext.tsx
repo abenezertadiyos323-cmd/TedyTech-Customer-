@@ -41,9 +41,9 @@ function AuthGateScreen({
   const hasInitData = !!window?.Telegram?.WebApp?.initData;
   const uaIsTelegram = /Telegram/i.test(navigator.userAgent);
   const isInTelegram = isTelegramWebApp || uaIsTelegram;
-  const showDebugOverlay =
-    import.meta.env.VITE_APP_ENVIRONMENT !== "production" ||
+  const isDebugEnabled =
     new URLSearchParams(window.location.search).get("debug") === "1";
+  const showDebugOverlay = isDebugEnabled;
   const debugUserAgent =
     navigator.userAgent.length > 80
       ? `${navigator.userAgent.slice(0, 80)}...`
@@ -53,10 +53,22 @@ function AuthGateScreen({
     window.Telegram?.WebApp?.ready?.();
   }, []);
 
+  useEffect(() => {
+    if (!isDebugEnabled) return;
+    console.info("CTA_GUARD_ACTIVE", {
+      isTelegramWebApp,
+      uaIsTelegram,
+      isInTelegram,
+    });
+  }, [isDebugEnabled, isTelegramWebApp, uaIsTelegram, isInTelegram]);
+
   const debugOverlay = showDebugOverlay ? (
     <div className="fixed left-2 top-2 z-[9999] rounded bg-black/80 px-2 py-1 text-[10px] text-white">
+      <div>CTA_GUARD_ACTIVE</div>
       <div>{`hasTelegramWebApp: ${isTelegramWebApp}`}</div>
       <div>{`hasInitData: ${hasInitData}`}</div>
+      <div>{`uaIsTelegram: ${uaIsTelegram}`}</div>
+      <div>{`isInTelegram: ${isInTelegram}`}</div>
       <div>{`platform: ${window.Telegram?.WebApp?.platform ?? "n/a"}`}</div>
       <div>{`version: ${window.Telegram?.WebApp?.version ?? "n/a"}`}</div>
       <div>{`userAgent: ${debugUserAgent}`}</div>
