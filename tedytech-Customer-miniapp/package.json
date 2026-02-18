@@ -1,6 +1,7 @@
 {
   "name": "tedytech-workspace",
   "private": true,
+  "packageManager": "pnpm@9.15.0",
   "engines": { "node": "20.x" },
   "workspaces": [
     "customer-app"
