@@ -37,48 +37,22 @@ function AuthGateScreen({
   errorMessage?: string | null;
   onRetry: () => void;
 }) {
-  const isTelegramWebApp = !!window?.Telegram?.WebApp;
-  const hasInitData = !!window?.Telegram?.WebApp?.initData;
-  const uaIsTelegram = /Telegram/i.test(navigator.userAgent);
-  const isInTelegram = isTelegramWebApp || uaIsTelegram;
-  const isDebugEnabled =
-    new URLSearchParams(window.location.search).get("debug") === "1";
-  const showDebugOverlay = isDebugEnabled;
-  const debugUserAgent =
-    navigator.userAgent.length > 80
-      ? `${navigator.userAgent.slice(0, 80)}...`
-      : navigator.userAgent;
+  const [isInTelegram, setIsInTelegram] = useState(false);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const hasWebApp = !!window.Telegram?.WebApp;
+    const uaIsTelegram = /Telegram/i.test(window.navigator.userAgent);
+
+    setIsInTelegram(hasWebApp || uaIsTelegram);
+
     window.Telegram?.WebApp?.ready?.();
   }, []);
-
-  useEffect(() => {
-    if (!isDebugEnabled) return;
-    console.info("CTA_GUARD_ACTIVE", {
-      isTelegramWebApp,
-      uaIsTelegram,
-      isInTelegram,
-    });
-  }, [isDebugEnabled, isTelegramWebApp, uaIsTelegram, isInTelegram]);
-
-  const debugOverlay = showDebugOverlay ? (
-    <div className="fixed left-2 top-2 z-[9999] rounded bg-black/80 px-2 py-1 text-[10px] text-white">
-      <div>CTA_GUARD_ACTIVE</div>
-      <div>{`hasTelegramWebApp: ${isTelegramWebApp}`}</div>
-      <div>{`hasInitData: ${hasInitData}`}</div>
-      <div>{`uaIsTelegram: ${uaIsTelegram}`}</div>
-      <div>{`isInTelegram: ${isInTelegram}`}</div>
-      <div>{`platform: ${window.Telegram?.WebApp?.platform ?? "n/a"}`}</div>
-      <div>{`version: ${window.Telegram?.WebApp?.version ?? "n/a"}`}</div>
-      <div>{`userAgent: ${debugUserAgent}`}</div>
-    </div>
-  ) : null;
 
   if (state === "needs_telegram") {
     return (
       <div className="min-h-screen bg-background px-6 flex items-center justify-center">
-        {debugOverlay}
         <div className="w-full max-w-sm rounded-2xl border bg-card p-6 text-center">
           <h1 className="text-lg font-semibold">Open this inside Telegram</h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -100,7 +74,6 @@ function AuthGateScreen({
   if (state === "error") {
     return (
       <div className="min-h-screen bg-background px-6 flex items-center justify-center">
-        {debugOverlay}
         <div className="w-full max-w-sm rounded-2xl border bg-card p-6 text-center">
           <h1 className="text-lg font-semibold">Couldn&apos;t sign you in</h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -127,7 +100,6 @@ function AuthGateScreen({
 
   return (
     <div className="min-h-screen bg-background px-6 flex items-center justify-center">
-      {debugOverlay}
       <p className="text-sm text-muted-foreground">
         {state === "verifying"
           ? "Verifying Telegram session..."
