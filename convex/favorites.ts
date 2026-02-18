@@ -3,13 +3,15 @@ import { v } from "convex/values";
 
 export const getFavorites = query({
   args: {
-    userId: v.string(),
+    userId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    if (!args.userId) return [];
+
     return await ctx.db
       .query("favorites")
-      .filter((q) => q.eq(q.field("userId"), args.userId))
-      .order("createdAt", "desc")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("desc")
       .collect();
   },
 });

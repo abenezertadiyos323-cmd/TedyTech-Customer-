@@ -18,7 +18,7 @@ const latestFavorites = new Map<string, any[]>();
 export function useFavorites(sessionId: string | null) {
   const convexData = useConvexQuery(
     api.favorites.getFavorites,
-    sessionId ? { userId: sessionId } : (undefined as any),
+    sessionId ? { userId: sessionId } : "skip",
   );
 
   const data = (convexData ?? []) as Array<{
@@ -78,7 +78,7 @@ export function useFavorites(sessionId: string | null) {
   // Expose compatible shape
   return {
     data: localFavorites,
-    isLoading: convexData === undefined,
+    isLoading: !!sessionId && convexData === undefined,
     error: null,
   };
 }
