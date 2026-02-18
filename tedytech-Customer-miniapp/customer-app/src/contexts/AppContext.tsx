@@ -37,6 +37,12 @@ function AuthGateScreen({
   errorMessage?: string | null;
   onRetry: () => void;
 }) {
+  const isTelegramWebApp = !!window?.Telegram?.WebApp;
+
+  useEffect(() => {
+    window.Telegram?.WebApp?.ready?.();
+  }, []);
+
   if (state === "needs_telegram") {
     return (
       <div className="min-h-screen bg-background px-6 flex items-center justify-center">
@@ -45,12 +51,14 @@ function AuthGateScreen({
           <p className="mt-2 text-sm text-muted-foreground">
             This mini app must be launched from Telegram.
           </p>
-          <a
-            href={TELEGRAM_STARTAPP_URL}
-            className="mt-5 inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-          >
-            Open in Telegram
-          </a>
+          {!isTelegramWebApp && (
+            <a
+              href={TELEGRAM_STARTAPP_URL}
+              className="mt-5 inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Open in Telegram
+            </a>
+          )}
         </div>
       </div>
     );
