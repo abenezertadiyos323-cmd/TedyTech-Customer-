@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, lazy, Suspense } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,23 +10,24 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import { ChevronDown, ChevronUp, Check, ChevronsUpDown } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import { useBrowsePhones } from '@/hooks/usePhones';
 import { useCreateExchangeRequest } from '@/hooks/usePhoneActions';
 import { useSession } from '@/hooks/useSession';
 import { cn } from '@/lib/utils';
+
+// Hoist at module scope — starts downloading the cmdk chunk immediately when
+// ExchangeTab's own chunk evaluates, so the picker is pre-warmed before the
+// user can open the dropdown. Suspense fallback=null means nothing blocks if
+// it isn't ready yet (only happens on extremely slow connections).
+const _phonePickerChunk = import('./ExchangePhonePicker');
+const PhonePickerContent = lazy(() =>
+  _phonePickerChunk.then((m) => ({ default: m.ExchangePhonePicker })),
+);
 
 const STORAGE_OPTIONS = [64, 128, 256, 512];
 const CONDITION_OPTIONS = ['Excellent', 'Good', 'Fair'];
@@ -112,39 +113,23 @@ export function ExchangeTab() {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 bg-popover border border-border z-50" align="start">
-                  <Command className="bg-popover">
-                    <CommandInput placeholder="Search phones..." className="h-9 text-sm" />
-                    <CommandList className="max-h-60">
-                      <CommandEmpty>
-                        {phonesLoading ? 'Loading...' : 'No phones found.'}
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {availablePhones.map((phone) => {
-                          const label = `${phone.brand} ${phone.model}${phone.storage_gb ? ` ${phone.storage_gb}GB` : ''}`;
-                          return (
-                            <CommandItem
-                              key={phone.id}
-                              value={label}
-                              onSelect={() => {
-                                setSelectedPhoneId(phone.id);
-                                setPhoneSelectOpen(false);
-                              }}
-                              className="cursor-pointer"
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  selectedPhoneId === phone.id ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {label}
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
+                <PopoverContent
+                  className="w-[var(--radix-popover-trigger-width)] p-0 bg-popover border border-border z-50"
+                  align="start"
+                >
+                  {/* cmdk lives in its own pre-warmed chunk — fallback=null so
+                      the popover stays empty for a frame rather than spinning */}
+                  <Suspense fallback={null}>
+                    <PhonePickerContent
+                      phones={availablePhones}
+                      phonesLoading={phonesLoading}
+                      selectedPhoneId={selectedPhoneId}
+                      onSelect={(id) => {
+                        setSelectedPhoneId(id);
+                        setPhoneSelectOpen(false);
+                      }}
+                    />
+                  </Suspense>
                 </PopoverContent>
               </Popover>
               <p className="text-xs text-muted-foreground">

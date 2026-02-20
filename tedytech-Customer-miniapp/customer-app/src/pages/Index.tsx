@@ -68,7 +68,10 @@ const Index = () => {
             isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
           )}
         >
-          <Suspense fallback={<div className="min-h-screen bg-background pb-24"><div className="flex items-center justify-center pt-40"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div></div>}>
+          {/* All chunks are hoisted at module scope so they download in parallel
+              at app open. fallback=null means no spinner ever flashes — on
+              very slow connections the tab area stays blank for one frame. */}
+          <Suspense fallback={null}>
             {activeTab === 'home' && (
               <HomeTab
                 key={homeKey}
