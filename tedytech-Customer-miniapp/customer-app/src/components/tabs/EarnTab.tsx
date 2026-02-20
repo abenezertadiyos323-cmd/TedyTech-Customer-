@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Copy, Share2, DollarSign, Clock, CheckCircle, Users, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { useAffiliate, useCreateAffiliate } from '@/hooks/useAffiliate';
+import { useAffiliateContext, useCreateAffiliate } from '@/hooks/useAffiliate';
 import { useApp } from '@/contexts/AppContext';
 import { toast } from 'sonner';
 
@@ -58,7 +58,7 @@ function EarnTabInner() {
     stats,
     hasAffiliate,
     canUseAffiliate,
-  } = useAffiliate();
+  } = useAffiliateContext();
   const createAffiliate = useCreateAffiliate();
   const [hasTriedCreate, setHasTriedCreate] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);

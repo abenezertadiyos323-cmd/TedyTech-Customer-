@@ -2,7 +2,7 @@ import {
   useQuery as useConvexQuery,
   useMutation as useConvexMutation,
 } from "convex/react";
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import { api } from "@/convex_generated/api";
 import { useApp } from "@/contexts/AppContext";
 
@@ -126,4 +126,23 @@ export function useCreateAffiliate() {
       }
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Shared context — Index.tsx calls useAffiliate() once, stores the result
+// here, and EarnTab consumes it without opening a second subscription.
+// ---------------------------------------------------------------------------
+
+export type AffiliateState = ReturnType<typeof useAffiliate>;
+
+export const AffiliateContext = createContext<AffiliateState | null>(null);
+
+/**
+ * Consume the affiliate state provided by AffiliateContext.
+ * Must be called inside a component rendered under AffiliateContext.Provider.
+ */
+export function useAffiliateContext(): AffiliateState {
+  const ctx = useContext(AffiliateContext);
+  if (!ctx) throw new Error("useAffiliateContext: missing AffiliateContext.Provider");
+  return ctx;
 }
