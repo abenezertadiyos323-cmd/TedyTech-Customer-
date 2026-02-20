@@ -40,10 +40,11 @@ interface AffiliateStats {
  */
 export function useAffiliate() {
   const { authUserId, isAuthenticated, isAuthLoading } = useApp();
+  const customerId = authUserId;
   const affiliateEnabled = isAuthenticated && !!authUserId && !isAuthLoading;
   const affiliateData = useConvexQuery(
     api.affiliates.getAffiliateByCustomerId,
-    authUserId ? { customerId: authUserId } : (undefined as any),
+    customerId ? { customerId } : "skip",
   );
   const affiliate = affiliateData ?? null;
 
