@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, Share2, DollarSign, Clock, CheckCircle, Users, Loader2, AlertCircle } from 'lucide-react';
+import { Copy, Share2, DollarSign, Clock, CheckCircle, Users, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAffiliate, useCreateAffiliate } from '@/hooks/useAffiliate';
@@ -57,7 +57,6 @@ function EarnTabInner() {
   const {
     stats,
     hasAffiliate,
-    isLoading: affiliateLoading,
     canUseAffiliate,
   } = useAffiliate();
   const createAffiliate = useCreateAffiliate();
@@ -135,102 +134,10 @@ function EarnTabInner() {
     }
   };
 
-  // ── STRICT RENDER ORDER ──────────────────────────────────────────────────
-
-  // 1. Auth or affiliate query still loading
-  const isLoading = isAuthLoading || (canUseAffiliate && affiliateLoading);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Loading affiliate program...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // 2. Not authenticated (session missing)
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <AlertCircle className="w-12 h-12 text-destructive mx-auto" />
-          <h2 className="text-lg font-semibold text-foreground">Connection Error</h2>
-          <p className="text-sm text-muted-foreground max-w-xs">
-            Unable to connect to the affiliate program. Please try refreshing the page.
-          </p>
-          <Button onClick={() => window.location.reload()} variant="outline">
-            Refresh Page
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // 3. Telegram verification hasn't completed yet
-  if (!verifiedCustomerId || !canUseAffiliate) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto" />
-          <h2 className="text-lg font-semibold text-foreground">Setup Required</h2>
-          <p className="text-sm text-muted-foreground max-w-xs">
-            Please reopen from the bot and try again.
-          </p>
-          <Button onClick={() => window.location.reload()} variant="outline">
-            Refresh Page
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // 4. No affiliate yet — creation pending or not started
-  if (!hasAffiliate && (!hasTriedCreate || createAffiliate.isPending)) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-          <p className="text-sm text-muted-foreground">Setting up your affiliate account...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // 5. Creation attempted but affiliate still null
-  if (!hasAffiliate) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <AlertCircle className="w-12 h-12 text-destructive mx-auto" />
-          <h2 className="text-lg font-semibold text-foreground">
-            You are not registered as an affiliate yet.
-          </h2>
-          <p className="text-sm text-muted-foreground max-w-xs">
-            {mutationError
-              ? `Error: ${mutationError}`
-              : 'We could not create your affiliate record. Please try again.'}
-          </p>
-          <Button
-            onClick={() => {
-              setHasTriedCreate(false);
-              setMutationError(null);
-            }}
-            disabled={createAffiliate.isPending}
-          >
-            {createAffiliate.isPending ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : null}
-            Retry setup
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // 6. Affiliate confirmed — render full dashboard
+  // Always render the full dashboard immediately.
+  // Stats default to zero values; referralCode defaults to null (shown as '—').
+  // Buttons are disabled when referralCode is null.
+  // Auto-create fires in the background once auth resolves.
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -375,6 +282,27 @@ function EarnTabInner() {
             </div>
           </div>
         </Card>
+
+        {/* Inline retry — shown only after creation was attempted and failed */}
+        {hasTriedCreate && !hasAffiliate && !createAffiliate.isPending && (
+          <div className="text-center space-y-2 py-2">
+            <p className="text-xs text-muted-foreground">
+              {mutationError
+                ? `Setup error: ${mutationError}`
+                : 'Could not set up affiliate account.'}
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setHasTriedCreate(false);
+                setMutationError(null);
+              }}
+            >
+              Retry setup
+            </Button>
+          </div>
+        )}
 
         {/* Payout Info */}
         <div className="text-center py-4">
