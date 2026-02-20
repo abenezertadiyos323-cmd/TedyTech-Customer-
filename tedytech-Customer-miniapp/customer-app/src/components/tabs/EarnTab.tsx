@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Copy, Share2, DollarSign, Clock, CheckCircle, Users, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -6,47 +6,180 @@ import { useAffiliate, useCreateAffiliate } from '@/hooks/useAffiliate';
 import { useApp } from '@/contexts/AppContext';
 import { toast } from 'sonner';
 
-export function EarnTab() {
+// ---------------------------------------------------------------------------
+// Debug mode guard
+// ---------------------------------------------------------------------------
+
+function isDebugMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (window.location.hostname.includes('localhost')) return true;
+  return new URLSearchParams(window.location.search).get('debug') === '1';
+}
+
+// ---------------------------------------------------------------------------
+// Runtime debug box — only rendered when ?debug=1
+// ---------------------------------------------------------------------------
+
+interface DebugBoxProps {
+  verifiedCustomerId: string | null;
+  affiliate: unknown;
+  commissionsLength: number;
+  totalEarnings: number;
+  isPending: boolean;
+  mutationError: string | null;
+}
+
+function EarnDebugBox({
+  verifiedCustomerId,
+  affiliate,
+  commissionsLength,
+  totalEarnings,
+  isPending,
+  mutationError,
+}: DebugBoxProps) {
+  if (!isDebugMode()) return null;
+  return (
+    <div
+      style={{
+        margin: '8px 0 12px',
+        padding: 10,
+        background: '#0f172a',
+        border: '1px solid #1e3a5f',
+        borderRadius: 6,
+        fontFamily: 'monospace',
+        fontSize: 11,
+        color: '#94a3b8',
+        lineHeight: 1.6,
+      }}
+    >
+      <div style={{ color: '#38bdf8', marginBottom: 4, fontWeight: 700 }}>
+        ⚙ EARN DEBUG
+      </div>
+      <div>verifiedCustomerId: <span style={{ color: verifiedCustomerId ? '#4ade80' : '#f87171' }}>{verifiedCustomerId ?? 'null'}</span></div>
+      <div>affiliate: <span style={{ color: affiliate ? '#4ade80' : '#fbbf24' }}>{affiliate === undefined ? 'loading…' : affiliate === null ? 'null' : JSON.stringify(affiliate)}</span></div>
+      <div>commissionsLength: <span style={{ color: '#e2e8f0' }}>{commissionsLength}</span></div>
+      <div>totalEarnings: <span style={{ color: '#e2e8f0' }}>{totalEarnings}</span></div>
+      <div>createAffiliate.isPending: <span style={{ color: isPending ? '#fbbf24' : '#94a3b8' }}>{String(isPending)}</span></div>
+      <div>mutationError: <span style={{ color: mutationError ? '#f87171' : '#94a3b8' }}>{mutationError ?? 'null'}</span></div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Local error boundary — catches render errors inside EarnTab only
+// ---------------------------------------------------------------------------
+
+interface EarnErrorBoundaryState {
+  hasError: boolean;
+  errorMessage: string;
+}
+
+class EarnErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  EarnErrorBoundaryState
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, errorMessage: '' };
+  }
+
+  static getDerivedStateFromError(error: unknown): EarnErrorBoundaryState {
+    const msg = error instanceof Error ? error.message : String(error);
+    return { hasError: true, errorMessage: msg };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+          <div className="text-center space-y-4 max-w-xs">
+            <AlertCircle className="w-12 h-12 text-destructive mx-auto" />
+            <h2 className="text-lg font-semibold text-foreground">
+              Earn tab encountered an error
+            </h2>
+            {isDebugMode() && (
+              <pre
+                style={{
+                  fontSize: 10,
+                  textAlign: 'left',
+                  background: '#0f172a',
+                  color: '#f87171',
+                  padding: 8,
+                  borderRadius: 4,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                }}
+              >
+                {this.state.errorMessage}
+              </pre>
+            )}
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Reload
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// EarnTabInner — the actual component, wrapped by the boundary below
+// ---------------------------------------------------------------------------
+
+function EarnTabInner() {
   const { isAuthenticated, isAuthLoading, authUserId, verifiedCustomerId } = useApp();
-  const { stats, hasAffiliate, isLoading: affiliateLoading, error: affiliateError, canUseAffiliate } = useAffiliate();
+  const {
+    affiliate,
+    commissions,
+    stats,
+    hasAffiliate,
+    isLoading: affiliateLoading,
+    canUseAffiliate,
+  } = useAffiliate();
   const createAffiliate = useCreateAffiliate();
   const [hasTriedCreate, setHasTriedCreate] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
-  // Derived loading state
-  const isLoading = isAuthLoading || (canUseAffiliate && affiliateLoading && isAuthenticated && !!authUserId && !hasAffiliate);
-
-
-  // Auto-create affiliate when authenticated user visits Earn tab
+  // ── Auto-create affiliate when authenticated user visits Earn tab ─────────
   useEffect(() => {
-    // Don't attempt if still loading auth
     if (isAuthLoading) return;
-    
-    // Don't attempt if not authenticated
     if (!isAuthenticated || !authUserId) return;
-
-    // Don't attempt if Telegram verification hasn't produced a customer id yet
     if (!verifiedCustomerId || !canUseAffiliate) return;
-    
-    // Don't attempt if already has affiliate or already tried
     if (hasAffiliate || hasTriedCreate) return;
-    
-    // Don't attempt if currently creating
     if (createAffiliate.isPending) return;
 
     setHasTriedCreate(true);
-    createAffiliate.mutate().catch(() => {
+    setMutationError(null);
+    createAffiliate.mutate().catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      setMutationError(msg);
       toast.error('Failed to join affiliate program');
     });
-  }, [isAuthenticated, authUserId, verifiedCustomerId, canUseAffiliate, hasAffiliate, hasTriedCreate, isAuthLoading, createAffiliate]);
+  }, [
+    isAuthenticated,
+    authUserId,
+    verifiedCustomerId,
+    canUseAffiliate,
+    hasAffiliate,
+    hasTriedCreate,
+    isAuthLoading,
+    createAffiliate,
+  ]);
 
-  // Reset hasTriedCreate when authUserId changes
+  // Reset when user identity changes
   useEffect(() => {
     setHasTriedCreate(false);
+    setMutationError(null);
   }, [authUserId]);
 
-  const referralCode = stats.referralCode || '';
-  const referralLink = stats.referralCode 
-    ? `https://tedytech.com/ref/${stats.referralCode}` 
+  const formatCurrency = (amount: number) =>
+    `${amount.toLocaleString()} ETB`;
+
+  const referralCode = stats.referralCode ?? '';
+  const referralLink = stats.referralCode
+    ? `https://tedytech.com/ref/${stats.referralCode}`
     : '';
 
   const handleCopyCode = () => {
@@ -65,7 +198,6 @@ export function EarnTab() {
 
   const handleShare = async () => {
     if (!stats.referralCode) return;
-    
     if (navigator.share) {
       try {
         await navigator.share({
@@ -81,11 +213,13 @@ export function EarnTab() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return `${amount.toLocaleString()} ETB`;
-  };
+  // ── STRICT RENDER ORDER ──────────────────────────────────────────────────
 
-  // Show loading while auth is initializing
+  // 1. Auth or affiliate query still loading
+  const isLoading =
+    isAuthLoading ||
+    (canUseAffiliate && affiliateLoading);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -97,8 +231,8 @@ export function EarnTab() {
     );
   }
 
-  // Show error state if auth failed
-  if (!isAuthenticated && !isAuthLoading) {
+  // 2. Not authenticated (session missing)
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center space-y-4">
@@ -115,15 +249,15 @@ export function EarnTab() {
     );
   }
 
-  // Verified customer id is required before affiliate query can run.
-  if (!isAuthLoading && isAuthenticated && (!verifiedCustomerId || !canUseAffiliate)) {
+  // 3. Telegram verification hasn't completed yet
+  if (!verifiedCustomerId || !canUseAffiliate) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center space-y-4">
           <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto" />
           <h2 className="text-lg font-semibold text-foreground">Setup Required</h2>
           <p className="text-sm text-muted-foreground max-w-xs">
-            Please reopen from the bot and try again
+            Please reopen from the bot and try again.
           </p>
           <Button onClick={() => window.location.reload()} variant="outline">
             Refresh Page
@@ -133,35 +267,8 @@ export function EarnTab() {
     );
   }
 
-  // Show error if affiliate creation failed
-  if (affiliateError && !hasAffiliate) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center space-y-4">
-          <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto" />
-          <h2 className="text-lg font-semibold text-foreground">Setup Required</h2>
-          <p className="text-sm text-muted-foreground max-w-xs">
-            Unable to load your affiliate account. Please try again.
-          </p>
-          <Button 
-            onClick={() => {
-              setHasTriedCreate(false);
-              createAffiliate.mutate();
-            }} 
-            disabled={createAffiliate.isPending}
-          >
-            {createAffiliate.isPending ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : null}
-            Try Again
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Show creating state while affiliate is being set up
-  if (!hasAffiliate && (createAffiliate.isPending || !hasTriedCreate)) {
+  // 4. No affiliate yet — either pending creation or not started
+  if (!hasAffiliate && (!hasTriedCreate || createAffiliate.isPending)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-3">
@@ -172,20 +279,32 @@ export function EarnTab() {
     );
   }
 
-  // If we tried creating but still have no affiliate, show an actionable error (not a blank state)
-  if (!hasAffiliate && hasTriedCreate && !createAffiliate.isPending) {
+  // 5. Creation attempted but affiliate still null — not registered or creation failed
+  if (!hasAffiliate) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center space-y-4">
           <AlertCircle className="w-12 h-12 text-destructive mx-auto" />
-          <h2 className="text-lg font-semibold text-foreground">Couldn’t set up your account</h2>
+          <h2 className="text-lg font-semibold text-foreground">
+            You are not registered as an affiliate yet.
+          </h2>
           <p className="text-sm text-muted-foreground max-w-xs">
-            We couldn’t create or load your affiliate record. Please try again.
+            {mutationError
+              ? `Error: ${mutationError}`
+              : 'We could not create your affiliate record. Please try again.'}
           </p>
+          <EarnDebugBox
+            verifiedCustomerId={verifiedCustomerId}
+            affiliate={affiliate}
+            commissionsLength={commissions.length}
+            totalEarnings={stats.totalEarnings}
+            isPending={createAffiliate.isPending}
+            mutationError={mutationError}
+          />
           <Button
             onClick={() => {
               setHasTriedCreate(false);
-              createAffiliate.mutate();
+              setMutationError(null);
             }}
             disabled={createAffiliate.isPending}
           >
@@ -199,6 +318,7 @@ export function EarnTab() {
     );
   }
 
+  // 6. Affiliate exists — render dashboard
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -212,6 +332,16 @@ export function EarnTab() {
       </header>
 
       <div className="p-4 space-y-6 pt-20">
+        {/* Debug box — visible only in debug mode */}
+        <EarnDebugBox
+          verifiedCustomerId={verifiedCustomerId}
+          affiliate={affiliate}
+          commissionsLength={commissions.length}
+          totalEarnings={stats.totalEarnings}
+          isPending={createAffiliate.isPending}
+          mutationError={mutationError}
+        />
+
         {/* Hero Text */}
         <div className="text-center py-4">
           <h2 className="text-lg font-semibold text-foreground mb-2">
@@ -280,8 +410,8 @@ export function EarnTab() {
             <div className="flex-1 bg-muted rounded-lg px-4 py-3 font-mono text-lg font-bold text-center text-foreground tracking-wider">
               {referralCode || '—'}
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="icon"
               onClick={handleCopyCode}
               className="shrink-0"
@@ -299,8 +429,8 @@ export function EarnTab() {
             <div className="flex-1 bg-muted rounded-lg px-4 py-3 text-sm text-muted-foreground truncate">
               {referralLink || '—'}
             </div>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="icon"
               onClick={handleCopyLink}
               className="shrink-0"
@@ -309,7 +439,7 @@ export function EarnTab() {
               <Copy className="w-4 h-4" />
             </Button>
           </div>
-          <Button 
+          <Button
             className="w-full gap-2"
             onClick={handleShare}
             disabled={!stats.referralCode}
@@ -352,5 +482,17 @@ export function EarnTab() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Public export — wrapped with local error boundary
+// ---------------------------------------------------------------------------
+
+export function EarnTab() {
+  return (
+    <EarnErrorBoundary>
+      <EarnTabInner />
+    </EarnErrorBoundary>
   );
 }

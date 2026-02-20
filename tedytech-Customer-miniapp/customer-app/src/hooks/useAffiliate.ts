@@ -76,10 +76,13 @@ export function useAffiliate() {
       .length,
   };
 
+  // isLoading is true only while queries are genuinely in-flight.
+  // commissionsData is "skip"/undefined when affiliate is null — that is NOT
+  // loading, so we must not gate on it when affiliate is null.
   const isLoading =
     isAuthLoading ||
-    (customerId !== null &&
-      (affiliateData === undefined || commissionsData === undefined));
+    (customerId !== null && affiliateData === undefined) ||
+    (affiliate !== null && commissionsData === undefined);
 
   return {
     affiliate,
