@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "installCommand": "corepack enable && corepack prepare pnpm@10.0.0 --activate && pnpm --dir customer-app install --frozen-lockfile",
-  "buildCommand": "pnpm --dir customer-app run build",
-  "outputDirectory": "customer-app/dist"
+  "installCommand": "corepack enable && corepack prepare pnpm@10.0.0 --activate && pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist"
 }
