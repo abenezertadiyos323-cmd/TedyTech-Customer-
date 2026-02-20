@@ -7,71 +7,12 @@ import { useApp } from '@/contexts/AppContext';
 import { toast } from 'sonner';
 
 // ---------------------------------------------------------------------------
-// Debug mode guard
-// ---------------------------------------------------------------------------
-
-function isDebugMode(): boolean {
-  if (typeof window === 'undefined') return false;
-  if (window.location.hostname.includes('localhost')) return true;
-  return new URLSearchParams(window.location.search).get('debug') === '1';
-}
-
-// ---------------------------------------------------------------------------
-// Runtime debug box — only rendered when ?debug=1
-// ---------------------------------------------------------------------------
-
-interface DebugBoxProps {
-  verifiedCustomerId: string | null;
-  affiliate: unknown;
-  commissionsLength: number;
-  totalEarnings: number;
-  isPending: boolean;
-  mutationError: string | null;
-}
-
-function EarnDebugBox({
-  verifiedCustomerId,
-  affiliate,
-  commissionsLength,
-  totalEarnings,
-  isPending,
-  mutationError,
-}: DebugBoxProps) {
-  if (!isDebugMode()) return null;
-  return (
-    <div
-      style={{
-        margin: '8px 0 12px',
-        padding: 10,
-        background: '#0f172a',
-        border: '1px solid #1e3a5f',
-        borderRadius: 6,
-        fontFamily: 'monospace',
-        fontSize: 11,
-        color: '#94a3b8',
-        lineHeight: 1.6,
-      }}
-    >
-      <div style={{ color: '#38bdf8', marginBottom: 4, fontWeight: 700 }}>
-        ⚙ EARN DEBUG
-      </div>
-      <div>verifiedCustomerId: <span style={{ color: verifiedCustomerId ? '#4ade80' : '#f87171' }}>{verifiedCustomerId ?? 'null'}</span></div>
-      <div>affiliate: <span style={{ color: affiliate ? '#4ade80' : '#fbbf24' }}>{affiliate === undefined ? 'loading…' : affiliate === null ? 'null' : JSON.stringify(affiliate)}</span></div>
-      <div>commissionsLength: <span style={{ color: '#e2e8f0' }}>{commissionsLength}</span></div>
-      <div>totalEarnings: <span style={{ color: '#e2e8f0' }}>{totalEarnings}</span></div>
-      <div>createAffiliate.isPending: <span style={{ color: isPending ? '#fbbf24' : '#94a3b8' }}>{String(isPending)}</span></div>
-      <div>mutationError: <span style={{ color: mutationError ? '#f87171' : '#94a3b8' }}>{mutationError ?? 'null'}</span></div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Local error boundary — catches render errors inside EarnTab only
+// Local error boundary — catches render errors inside EarnTab only.
+// Prevents a broken Earn tab from crashing the entire app.
 // ---------------------------------------------------------------------------
 
 interface EarnErrorBoundaryState {
   hasError: boolean;
-  errorMessage: string;
 }
 
 class EarnErrorBoundary extends React.Component<
@@ -80,12 +21,11 @@ class EarnErrorBoundary extends React.Component<
 > {
   constructor(props: { children: React.ReactNode }) {
     super(props);
-    this.state = { hasError: false, errorMessage: '' };
+    this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: unknown): EarnErrorBoundaryState {
-    const msg = error instanceof Error ? error.message : String(error);
-    return { hasError: true, errorMessage: msg };
+  static getDerivedStateFromError(): EarnErrorBoundaryState {
+    return { hasError: true };
   }
 
   render() {
@@ -97,22 +37,6 @@ class EarnErrorBoundary extends React.Component<
             <h2 className="text-lg font-semibold text-foreground">
               Earn tab encountered an error
             </h2>
-            {isDebugMode() && (
-              <pre
-                style={{
-                  fontSize: 10,
-                  textAlign: 'left',
-                  background: '#0f172a',
-                  color: '#f87171',
-                  padding: 8,
-                  borderRadius: 4,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-all',
-                }}
-              >
-                {this.state.errorMessage}
-              </pre>
-            )}
             <Button onClick={() => window.location.reload()} variant="outline">
               Reload
             </Button>
@@ -125,14 +49,12 @@ class EarnErrorBoundary extends React.Component<
 }
 
 // ---------------------------------------------------------------------------
-// EarnTabInner — the actual component, wrapped by the boundary below
+// EarnTabInner — main component, wrapped by EarnErrorBoundary below
 // ---------------------------------------------------------------------------
 
 function EarnTabInner() {
   const { isAuthenticated, isAuthLoading, authUserId, verifiedCustomerId } = useApp();
   const {
-    affiliate,
-    commissions,
     stats,
     hasAffiliate,
     isLoading: affiliateLoading,
@@ -216,9 +138,7 @@ function EarnTabInner() {
   // ── STRICT RENDER ORDER ──────────────────────────────────────────────────
 
   // 1. Auth or affiliate query still loading
-  const isLoading =
-    isAuthLoading ||
-    (canUseAffiliate && affiliateLoading);
+  const isLoading = isAuthLoading || (canUseAffiliate && affiliateLoading);
 
   if (isLoading) {
     return (
@@ -267,7 +187,7 @@ function EarnTabInner() {
     );
   }
 
-  // 4. No affiliate yet — either pending creation or not started
+  // 4. No affiliate yet — creation pending or not started
   if (!hasAffiliate && (!hasTriedCreate || createAffiliate.isPending)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -279,7 +199,7 @@ function EarnTabInner() {
     );
   }
 
-  // 5. Creation attempted but affiliate still null — not registered or creation failed
+  // 5. Creation attempted but affiliate still null
   if (!hasAffiliate) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -293,14 +213,6 @@ function EarnTabInner() {
               ? `Error: ${mutationError}`
               : 'We could not create your affiliate record. Please try again.'}
           </p>
-          <EarnDebugBox
-            verifiedCustomerId={verifiedCustomerId}
-            affiliate={affiliate}
-            commissionsLength={commissions.length}
-            totalEarnings={stats.totalEarnings}
-            isPending={createAffiliate.isPending}
-            mutationError={mutationError}
-          />
           <Button
             onClick={() => {
               setHasTriedCreate(false);
@@ -318,7 +230,7 @@ function EarnTabInner() {
     );
   }
 
-  // 6. Affiliate exists — render dashboard
+  // 6. Affiliate confirmed — render full dashboard
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -332,16 +244,6 @@ function EarnTabInner() {
       </header>
 
       <div className="p-4 space-y-6 pt-20">
-        {/* Debug box — visible only in debug mode */}
-        <EarnDebugBox
-          verifiedCustomerId={verifiedCustomerId}
-          affiliate={affiliate}
-          commissionsLength={commissions.length}
-          totalEarnings={stats.totalEarnings}
-          isPending={createAffiliate.isPending}
-          mutationError={mutationError}
-        />
-
         {/* Hero Text */}
         <div className="text-center py-4">
           <h2 className="text-lg font-semibold text-foreground mb-2">
@@ -486,7 +388,7 @@ function EarnTabInner() {
 }
 
 // ---------------------------------------------------------------------------
-// Public export — wrapped with local error boundary
+// Public export — EarnTabInner wrapped in local error boundary
 // ---------------------------------------------------------------------------
 
 export function EarnTab() {
