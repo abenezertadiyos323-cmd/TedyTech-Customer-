@@ -2,14 +2,24 @@ import { useState, lazy, Suspense } from 'react';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { DebugPanel } from '@/components/DebugPanel';
 import { cn } from '@/lib/utils';
+import { useAffiliate } from '@/hooks/useAffiliate';
 // Lazy load tab components to reduce initial bundle size
 const HomeTab = lazy(() => import('@/components/tabs/HomeTab').then(m => ({ default: m.HomeTab })));
 const SavedTab = lazy(() => import('@/components/tabs/SavedTab').then(m => ({ default: m.SavedTab })));
 const ExchangeTab = lazy(() => import('@/components/tabs/ExchangeTab').then(m => ({ default: m.ExchangeTab })));
 const AboutTab = lazy(() => import('@/components/tabs/AboutTab').then(m => ({ default: m.AboutTab })));
-const EarnTab = lazy(() => import('@/components/tabs/EarnTab').then(m => ({ default: m.EarnTab })));
+// Hoist the import() so the chunk downloads immediately at app open.
+// lazy() reuses the same in-flight promise — no double fetch.
+const _earnChunk = import('@/components/tabs/EarnTab');
+const EarnTab = lazy(() => _earnChunk.then(m => ({ default: m.EarnTab })));
 
 const Index = () => {
+  // Preload affiliate Convex subscriptions in background so Earn tab opens
+  // with real data on first render. Auto-create mutation is NOT triggered here
+  // (that lives in EarnTabInner's useEffect). Convex deduplicates the
+  // subscription when EarnTab mounts and calls useAffiliate() itself.
+  useAffiliate();
+
   const [activeTab, setActiveTab] = useState('home');
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [homeKey, setHomeKey] = useState(0); // Key to force HomeTab remount
