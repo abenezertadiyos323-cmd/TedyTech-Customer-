@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "installCommand": "corepack enable && corepack prepare pnpm@10.0.0 --activate && pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm run build",
-  "outputDirectory": "dist"
+  "installCommand": "cd tedytech-Customer-miniapp/customer-app && corepack enable && corepack prepare pnpm@10.0.0 --activate && pnpm install --frozen-lockfile",
+  "buildCommand": "cd tedytech-Customer-miniapp/customer-app && pnpm run build",
+  "outputDirectory": "tedytech-Customer-miniapp/customer-app/dist"
 }
