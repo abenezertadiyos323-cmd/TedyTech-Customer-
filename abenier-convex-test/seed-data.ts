@@ -1,7 +1,7 @@
 import { ConvexClient } from "convex/browser";
 import { api } from "./convex/_generated/api";
 
-const client = new ConvexClient("https://original-ram-766.convex.cloud");
+const client = new ConvexClient("https://clever-partridge-181.convex.cloud");
 
 async function seedData() {
   console.log("Creating test category...");

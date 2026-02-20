@@ -1,9 +1,53 @@
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "convex_generated/api";
 import { useAdmin } from "@/contexts/AdminContext";
-import type { PhoneAction } from "@/types/order";
+import type { AdminOrder, AdminOrderStatus, PhoneAction } from "@/types/order";
 import { mockPhoneActions } from "@/data/mockData";
 import { logQueryDebug } from "@/lib/queryDebug";
+
+/**
+ * Fetch all admin orders and expose order status update mutation
+ */
+export function useOrders() {
+  const { adminToken, isAuthorized } = useAdmin();
+  const authArgs = adminToken ? { token: adminToken } : "skip";
+
+  logQueryDebug({
+    hook: "useOrders",
+    query: "api.orders.adminListOrders",
+    adminTokenPresent: Boolean(adminToken),
+    args: authArgs,
+  });
+
+  const convexOrders = useQuery((api as any).orders.adminListOrders, authArgs as any);
+  const updateOrderStatusMutation = useMutation((api as any).orders.adminUpdateOrderStatus);
+
+  const updateStatus = async (orderId: string, status: AdminOrderStatus) => {
+    if (!adminToken) {
+      throw new Error("Admin session unavailable. Reopen the mini app.");
+    }
+
+    await updateOrderStatusMutation({
+      token: adminToken,
+      orderId: orderId as any,
+      status,
+    });
+  };
+
+  const error =
+    isAuthorized === false
+      ? "Unauthorized access."
+      : !adminToken && isAuthorized === true
+        ? "Admin session unavailable. Reopen the mini app."
+        : null;
+
+  return {
+    orders: (convexOrders ?? []) as AdminOrder[],
+    isLoading: Boolean(adminToken) && convexOrders === undefined,
+    error,
+    updateStatus,
+  };
+}
 
 /**
  * Fetch all phone actions

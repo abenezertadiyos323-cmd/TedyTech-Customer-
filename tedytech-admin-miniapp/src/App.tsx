@@ -16,6 +16,9 @@ const OrdersTab = React.lazy(() =>
 const InboxTab = React.lazy(() =>
   import("@/pages/InboxTab").then((m) => ({ default: m.InboxTab })),
 );
+const ActivityTab = React.lazy(() =>
+  import("@/pages/ActivityTab").then((m) => ({ default: m.ActivityTab })),
+);
 
 function TabLoader() {
   return (
@@ -117,7 +120,9 @@ export default function App() {
       case "orders":
         return "Orders & Exchanges";
       case "inbox":
-        return "Inbox";
+        return "Hot Leads";
+      case "activity":
+        return "Activity";
       default:
         return "TedyTech Admin";
     }
@@ -133,6 +138,8 @@ export default function App() {
         return <OrdersTab />;
       case "inbox":
         return <InboxTab />;
+      case "activity":
+        return <ActivityTab />;
       default:
         return <DashboardTab />;
     }

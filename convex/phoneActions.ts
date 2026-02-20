@@ -118,10 +118,12 @@ export const listAllExchangeRequests = query({
 // Admin: update exchange request status
 export const updateExchangeStatus = mutation({
   args: {
+    token: v.string(),
     requestId: v.id("exchangeRequests"),
     status: v.string(),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.token);
     await ctx.db.patch(args.requestId, { status: args.status });
   },
 });

@@ -21,6 +21,7 @@ interface AdminContextType {
   telegramUserId: number | null;
   isWebAppReady: boolean;
   adminToken: string | null;
+  sellerId: string | null;
   isAuthorized: boolean | null;
   webAppError: string | null;
 
@@ -55,6 +56,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [telegramUserId, setTelegramUserId] = useState<number | null>(null);
   const [isWebAppReady, setIsWebAppReady] = useState(false);
   const [adminToken, setAdminToken] = useState<string | null>(null);
+  const [sellerId, setSellerId] = useState<string | null>(null);
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [webAppError, setWebAppError] = useState<string | null>(null);
 
@@ -318,36 +320,6 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Validate environment variable
-      const allowed = import.meta.env.VITE_ADMIN_CHAT_ID;
-      console.log("[AdminContext] Environment check:", {
-        VITE_ADMIN_CHAT_ID: allowed,
-        telegramUserId,
-        matches: allowed && String(telegramUserId) === String(allowed),
-      });
-
-      if (!allowed) {
-        console.error(
-          "[AdminContext] VITE_ADMIN_CHAT_ID is not configured",
-        );
-        setWebAppError(
-          (prev) =>
-            prev ??
-            "Admin access is not configured. Set VITE_ADMIN_CHAT_ID in environment variables.",
-        );
-        setIsAuthorized(false);
-        return;
-      }
-
-      if (String(telegramUserId) !== String(allowed)) {
-        console.error("[AdminContext] Unauthorized user:", {
-          telegramUserId,
-          allowed,
-        });
-        setIsAuthorized(false);
-        return;
-      }
-
       try {
         console.log("[AdminContext] Starting authentication mutation");
 
@@ -392,12 +364,19 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
         if (resp && (resp as any).token) {
           const token = (resp as any).token as string;
-          console.log("[AdminContext] Authentication successful");
+          const sellerIdValue = String((resp as any)?.seller?.id ?? "");
+          console.log("[AdminContext] Authentication successful", {
+            sellerId: sellerIdValue,
+            businessName: (resp as any)?.seller?.businessName,
+            role: (resp as any)?.seller?.role,
+          });
 
           setAdminToken(token);
+          setSellerId(sellerIdValue);
           try {
             localStorage.setItem("tedytech_admin_token", token);
-            console.log("[AdminContext] Token saved to localStorage");
+            localStorage.setItem("tedytech_admin_seller_id", sellerIdValue);
+            console.log("[AdminContext] Token saved to localStorage. SELLER_ID:", sellerIdValue);
           } catch (e) {
             console.error(
               "[AdminContext] Failed to save token to localStorage:",
@@ -448,6 +427,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     telegramUserId,
     isWebAppReady,
     adminToken,
+    sellerId,
     isAuthorized,
     webAppError,
     inventoryFilters,

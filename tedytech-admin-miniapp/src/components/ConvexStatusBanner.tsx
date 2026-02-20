@@ -1,38 +1,71 @@
-import React, { useState } from "react";
-import { AlertTriangle, RefreshCw, Copy, Check } from "lucide-react";
+import React from "react";
+import { AlertTriangle, CheckCircle, Loader } from "lucide-react";
 
 type ConvexStatusBannerProps = {
-  error: string;
-  onRetry: () => void;
-  isRetrying: boolean;
+  isLoading: boolean;
+  isOk: boolean;
 };
 
 export const ConvexStatusBanner: React.FC<ConvexStatusBannerProps> = ({
-  error,
-  onRetry,
-  isRetrying,
+  isLoading,
+  isOk,
 }) => {
-  const [copied, setCopied] = useState(false);
+  if (isOk) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 9999,
+          background: "linear-gradient(to right, #16a34a, #15803d)",
+          color: "#fff",
+          padding: "8px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          fontSize: "13px",
+          fontWeight: 600,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+        }}
+      >
+        <CheckCircle size={16} />
+        Convex OK
+      </div>
+    );
+  }
 
-  const handleCopyDebug = () => {
-    const convexUrl = import.meta.env.VITE_CONVEX_URL || "not set";
-    const hostname = convexUrl.replace("https://", "").replace("http://", "");
-    const mode = import.meta.env.MODE || "unknown";
-    const telegramPresent = typeof window.Telegram?.WebApp !== "undefined";
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 9999,
+          background: "linear-gradient(to right, #d97706, #b45309)",
+          color: "#fff",
+          padding: "8px 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          fontSize: "13px",
+          fontWeight: 600,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+        }}
+      >
+        <Loader size={16} style={{ animation: "spin 1s linear infinite" }} />
+        Connecting to Convex...
+        <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
-    const debugInfo = {
-      hostname,
-      mode,
-      telegramPresent,
-      error: error || "unknown",
-      timestamp: new Date().toISOString(),
-    };
-
-    navigator.clipboard.writeText(JSON.stringify(debugInfo, null, 2)).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
+  // Not loading and not OK — health query returned an unexpected value
+  const convexUrl = import.meta.env.VITE_CONVEX_URL || "not set";
+  const hostname = convexUrl.replace("https://", "").replace("http://", "");
 
   return (
     <div
@@ -47,73 +80,18 @@ export const ConvexStatusBanner: React.FC<ConvexStatusBannerProps> = ({
         padding: "12px 16px",
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",
+        gap: "8px",
         boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-        gap: "12px",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
-        <AlertTriangle size={20} />
-        <div style={{ fontSize: "13px", lineHeight: "1.4" }}>
-          <strong>Convex Unreachable</strong>
-          <br />
-          <span style={{ opacity: 0.9, fontSize: "12px" }}>{error}</span>
-          <br />
-          <span style={{ opacity: 0.7, fontSize: "11px", fontStyle: "italic" }}>
-            Check production deploy + Vercel VITE_CONVEX_URL
-          </span>
-        </div>
+      <AlertTriangle size={20} />
+      <div style={{ fontSize: "13px", lineHeight: "1.4" }}>
+        <strong>Convex Unreachable</strong>
+        <br />
+        <span style={{ opacity: 0.85, fontSize: "11px" }}>
+          hostname: {hostname || "not set"} — check VITE_CONVEX_URL in Vercel
+        </span>
       </div>
-      <div style={{ display: "flex", gap: "8px" }}>
-        <button
-          onClick={handleCopyDebug}
-          style={{
-            background: "rgba(255, 255, 255, 0.15)",
-            border: "1px solid rgba(255, 255, 255, 0.3)",
-            color: "#fff",
-            padding: "8px 12px",
-            borderRadius: "6px",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            fontSize: "12px",
-            fontWeight: 600,
-            cursor: "pointer",
-            transition: "all 0.2s",
-          }}
-        >
-          {copied ? <Check size={14} /> : <Copy size={14} />}
-          {copied ? "Copied" : "Copy debug"}
-        </button>
-        <button
-          onClick={onRetry}
-          disabled={isRetrying}
-          style={{
-            background: "rgba(255, 255, 255, 0.2)",
-            border: "1px solid rgba(255, 255, 255, 0.4)",
-            color: "#fff",
-            padding: "8px 12px",
-            borderRadius: "6px",
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            fontSize: "12px",
-            fontWeight: 600,
-            cursor: isRetrying ? "not-allowed" : "pointer",
-            opacity: isRetrying ? 0.6 : 1,
-            transition: "all 0.2s",
-          }}
-        >
-          <RefreshCw size={14} style={{ animation: isRetrying ? "spin 1s linear infinite" : "none" }} />
-          {isRetrying ? "Retrying..." : "Retry"}
-        </button>
-      </div>
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };

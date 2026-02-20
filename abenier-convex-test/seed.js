@@ -8,7 +8,7 @@
 const https = require("https");
 
 // Configuration
-const CONVEX_URL = "https://original-ram-766.convex.cloud";
+const CONVEX_URL = "https://clever-partridge-181.convex.cloud";
 
 function makeRequest(path, method, data) {
   return new Promise((resolve, reject) => {

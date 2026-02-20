@@ -1,4 +1,6 @@
-import React, {
+/// <reference types="vite/client" />
+/// <reference path="../types/telegram-webapp.d.ts" />
+import {
   createContext,
   useContext,
   useState,
@@ -7,7 +9,9 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useMutation } from "convex/react";
+import { api } from "@/convex_generated/api";
+import { useSession } from "@/hooks/useSession";
 import {
   useFavorites,
   useAddFavorite,
@@ -15,102 +19,165 @@ import {
 } from "@/hooks/useFavorites";
 import type { Phone, SortOption } from "@/types/phone";
 
-const TELEGRAM_STARTAPP_URL = "https://t.me/<BOT_USERNAME>?startapp=home";
-type TelegramGateState =
-  | "loading"
-  | "needs_telegram"
-  | "verifying"
-  | "error"
-  | "ready";
-
-function getErrorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  return String(error);
+// Local Telegram WebApp type — self-contained so this file compiles
+// regardless of which tsconfig the IDE picks up.
+type TgThemeParams = {
+  bg_color?: string;
+  text_color?: string;
+  secondary_bg_color?: string;
+  button_color?: string;
+  button_text_color?: string;
+};
+type TgMainButton = {
+  setText?: (t: string) => void;
+  show?: () => void;
+  hide?: () => void;
+  onClick?: (h: () => void) => void;
+  offClick?: (h: () => void) => void;
+};
+type TgWebApp = {
+  initData?: string;
+  initDataUnsafe?: {
+    user?: {
+      id: number;
+      first_name?: string;
+      last_name?: string;
+      username?: string;
+      language_code?: string;
+    };
+  };
+  themeParams?: TgThemeParams;
+  ready?: () => void;
+  expand?: () => void;
+  close?: () => void;
+  MainButton?: TgMainButton;
+};
+/** Type-safe accessor — avoids relying on global Window augmentation. */
+function getTgWebApp(): TgWebApp | undefined {
+  return (window as { Telegram?: { WebApp?: TgWebApp } }).Telegram?.WebApp;
 }
 
-function AuthGateScreen({
-  state,
-  errorMessage,
-  onRetry,
-}: {
-  state: TelegramGateState;
-  errorMessage?: string | null;
-  onRetry: () => void;
-}) {
-  const [isInTelegram, setIsInTelegram] = useState(false);
+// ---------------------------------------------------------------------------
+// Debug logger — only emits when VITE_APP_ENVIRONMENT=dev or ?debug=1
+// ---------------------------------------------------------------------------
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+const IS_DEBUG =
+  new URLSearchParams(
+    typeof window !== "undefined" ? window.location.search : "",
+  ).get("debug") === "1" ||
+  (import.meta.env.VITE_APP_ENVIRONMENT as string | undefined) === "dev";
 
-    const hasWebApp = !!window.Telegram?.WebApp;
-    const uaIsTelegram = /Telegram/i.test(window.navigator.userAgent);
+function debugLog(msg: string, data?: Record<string, unknown>) {
+  if (!IS_DEBUG) return;
+  data !== undefined
+    ? console.debug(`[TedyTech] ${msg}`, data)
+    : console.debug(`[TedyTech] ${msg}`);
+}
 
-    setIsInTelegram(hasWebApp || uaIsTelegram);
+// ---------------------------------------------------------------------------
+// Telegram detection — 3-state machine
+// ---------------------------------------------------------------------------
 
-    window.Telegram?.WebApp?.ready?.();
-  }, []);
+type TelegramCheckState = "checking" | "in_telegram" | "needs_telegram";
 
-  if (state === "needs_telegram") {
-    return (
-      <div className="min-h-screen bg-background px-6 flex items-center justify-center">
-        <div className="w-full max-w-sm rounded-2xl border bg-card p-6 text-center">
-          <h1 className="text-lg font-semibold">Open this inside Telegram</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            This mini app must be launched from Telegram.
-          </p>
-          {!isInTelegram && (
-            <a
-              href={TELEGRAM_STARTAPP_URL}
-              className="mt-5 inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-            >
-              Open in Telegram
-            </a>
-          )}
-        </div>
-      </div>
-    );
+const TELEGRAM_STARTAPP_URL = "https://t.me/<BOT_USERNAME>?startapp=home";
+const TG_USER_STORAGE_KEY = "tg_user_id";
+
+export interface TelegramUser {
+  id: number;
+  first_name: string;
+  last_name?: string;
+  username?: string;
+  language_code?: string;
+}
+
+/**
+ * Safely extract the authenticated Telegram user from initDataUnsafe.
+ * Returns null if WebApp is unavailable or the user object is missing/malformed.
+ * Never throws — every level is guarded explicitly.
+ */
+function getTelegramUser(): TelegramUser | null {
+  try {
+    const tg = getTgWebApp();
+    if (!tg) return null;
+    // Guard each level independently — do NOT rely on optional chaining alone.
+    const unsafe = tg.initDataUnsafe;
+    if (!unsafe) return null;
+    const user = unsafe.user;
+    if (!user) return null;
+    // user.id must be a positive finite integer (Telegram guarantees this but be paranoid).
+    if (
+      typeof user.id !== "number" ||
+      !Number.isFinite(user.id) ||
+      user.id <= 0
+    ) {
+      return null;
+    }
+    return {
+      id: user.id,
+      // Type-guard every string field — malformed payloads may have wrong types.
+      first_name: typeof user.first_name === "string" ? user.first_name : "",
+      last_name:
+        typeof user.last_name === "string" ? user.last_name : undefined,
+      username:
+        typeof user.username === "string" ? user.username : undefined,
+      language_code:
+        typeof user.language_code === "string"
+          ? user.language_code
+          : undefined,
+    };
+  } catch {
+    return null;
   }
+}
 
-  if (state === "error") {
-    return (
-      <div className="min-h-screen bg-background px-6 flex items-center justify-center">
-        <div className="w-full max-w-sm rounded-2xl border bg-card p-6 text-center">
-          <h1 className="text-lg font-semibold">Couldn&apos;t sign you in</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {errorMessage ||
-              "Please reopen this mini app from Telegram and try again."}
-          </p>
-          <button
-            type="button"
-            onClick={onRetry}
-            className="mt-5 inline-flex w-full items-center justify-center rounded-md border border-border bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground"
-          >
-            Retry
-          </button>
-          <a
-            href={TELEGRAM_STARTAPP_URL}
-            className="mt-3 inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-          >
-            Reopen in Telegram
-          </a>
-        </div>
-      </div>
-    );
-  }
+// ---------------------------------------------------------------------------
+// Loading screen — shown immediately on mount while detection runs
+// ---------------------------------------------------------------------------
 
+function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-background px-6 flex items-center justify-center">
-      <p className="text-sm text-muted-foreground">
-        {state === "verifying"
-          ? "Verifying Telegram session..."
-          : "Loading..."}
-      </p>
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </div>
     </div>
   );
 }
 
+// ---------------------------------------------------------------------------
+// Gate screen — only shown as last resort after 1 000 ms timeout
+// ---------------------------------------------------------------------------
+
+function NeedsTelegramScreen() {
+  return (
+    <div className="min-h-screen bg-background px-6 flex items-center justify-center">
+      <div className="w-full max-w-sm rounded-2xl border bg-card p-6 text-center">
+        <h1 className="text-lg font-semibold">Open this inside Telegram</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          This mini app must be launched from Telegram.
+        </p>
+        <a
+          href={TELEGRAM_STARTAPP_URL}
+          className="mt-5 inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+        >
+          Open in Telegram
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Context type
+// ---------------------------------------------------------------------------
+
 interface AppContextType {
-  // Auth (replaces session)
+  // Telegram identity (new)
+  telegramUser: TelegramUser | null;
+
+  // Auth (backwards-compatible field names kept)
   authUserId: string | null;
   isAuthLoading: boolean;
   isAuthenticated: boolean;
@@ -118,6 +185,10 @@ interface AppContextType {
   customerId: string | null;
   telegramUserId: number | null;
   telegramUsername: string | null;
+
+  // Verified Convex customer ID — populated after background initData
+  // verification completes. null until then; never blocks rendering.
+  verifiedCustomerId: string | null;
 
   // Legacy session support for existing hooks
   sessionId: string | null;
@@ -156,39 +227,57 @@ interface AppContextType {
   resetToDefaultHome: () => void;
 }
 
+// ---------------------------------------------------------------------------
+// Context
+// ---------------------------------------------------------------------------
+
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
+// ---------------------------------------------------------------------------
+// Provider
+// ---------------------------------------------------------------------------
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  // New auth system with anonymous auth
-  const {
-    authUserId,
-    isLoading: isAuthLoading,
-    isAuthenticated,
-    isTelegramAuthenticated,
-    telegramIdentity,
-    verifyTelegram,
-    authError,
-    clearAuthError = () => {},
-  } = useAuth();
+  // ── Telegram detection (3-state) ─────────────────────────────────────────
+  const [checkState, setCheckState] =
+    useState<TelegramCheckState>("checking");
+  const [telegramUser, setTelegramUser] = useState<TelegramUser | null>(null);
 
-  // For backwards compatibility, create a session ID from auth user ID
-  const sessionId = authUserId;
-  const isSessionLoading = isAuthLoading;
+  // Pre-load Telegram user id from localStorage — available immediately on
+  // reload before WebApp injects, so Convex or logging can use it during the
+  // "checking" phase. Replaced by the real Telegram id once detection succeeds.
+  const storedTelegramUserId = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(TG_USER_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  })[0]; // read-only — we only need the initial value
 
-  // Favorites from Supabase (using sessionId for backwards compat)
-  // Guard: only subscribe once Telegram auth is verified to prevent premature query
-  const { data: favorites = [] } = useFavorites(
-    isTelegramAuthenticated && sessionId ? sessionId : null
+  // ── Convex background verification ───────────────────────────────────────
+  // Hook must be called unconditionally (Rules of Hooks).
+  // The actual call happens in a useEffect after Telegram is detected.
+  const verifyTelegramUserMutation = useMutation(api.auth.verifyTelegramUser);
+  // Verified Convex customer document ID — null until background verification
+  // completes successfully. Never blocks UI rendering.
+  const [verifiedCustomerId, setVerifiedCustomerId] = useState<string | null>(
+    null,
   );
+
+  // ── Session — runs in background; provides a stable Convex session id ────
+  const { sessionId, isLoading: isSessionLoading } = useSession();
+
+  // ── Favorites — no backend auth required; keyed by anonymous sessionId ───
+  const { data: favorites = [] } = useFavorites(sessionId);
   const addFavorite = useAddFavorite(sessionId);
   const removeFavorite = useRemoveFavorite(sessionId);
 
   const favoritePhoneIds = useMemo(
-    () => favorites.map((f) => f.phone_id),
+    () => favorites.map((f: { phone_id: string }) => f.phone_id),
     [favorites],
   );
 
-  // Filter state
+  // ── Filter state ─────────────────────────────────────────────────────────
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedBudget, setSelectedBudget] = useState<{
     min: number;
@@ -206,157 +295,115 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [targetExchangePhone, setTargetExchangePhone] = useState<Phone | null>(
     null,
   );
-  const [isInTelegram, setIsInTelegram] = React.useState(false);
-  const [telegramGateState, setTelegramGateState] =
-    React.useState<TelegramGateState>("loading");
-  const hasAttemptedTelegramAuth = React.useRef(false);
-  const setGateState = useCallback((next: TelegramGateState) => {
-    setTelegramGateState((current) => {
-      if (current !== next) {
-        console.info(`[AuthGate] state=${next}`);
-      }
-      return next;
-    });
-  }, []);
 
-  useEffect(() => {
-    console.info(`[AuthGate] state=${telegramGateState}`);
-  }, []);
-
-  const retryTelegramAuth = useCallback(() => {
-    clearAuthError();
-    hasAttemptedTelegramAuth.current = false;
-    const tg = window.Telegram?.WebApp;
-    if (!tg?.initData) {
-      setGateState("needs_telegram");
-      return;
-    }
-    setGateState("loading");
-  }, [clearAuthError, setGateState]);
-
-  // Initialize Telegram WebApp: lifecycle, theme, main button.
-  useEffect(() => {
-    try {
-      const tg = window.Telegram?.WebApp;
-      if (!tg?.initData) {
-        setIsInTelegram(false);
-        setGateState("needs_telegram");
-        return;
-      }
-
-      setIsInTelegram(true);
-      setGateState("loading");
-
-      // Basic lifecycle
-      tg.ready?.();
-      tg.expand?.();
-
-      // Apply theme params (set CSS variables for easy theming)
-      const tp = tg.themeParams;
-      if (tp) {
-        if (tp.bg_color)
-          document.documentElement.style.setProperty(
-            "--tg-bg-color",
-            tp.bg_color,
-          );
-        if (tp.text_color)
-          document.documentElement.style.setProperty(
-            "--tg-text-color",
-            tp.text_color,
-          );
-        if (tp.secondary_bg_color)
-          document.documentElement.style.setProperty(
-            "--tg-secondary-bg-color",
-            tp.secondary_bg_color,
-          );
-        if (tp.button_color)
-          document.documentElement.style.setProperty(
-            "--tg-button-color",
-            tp.button_color,
-          );
-        if (tp.button_text_color)
-          document.documentElement.style.setProperty(
-            "--tg-button-text-color",
-            tp.button_text_color,
-          );
-      }
-    } catch (error) {
-      console.error(`[AuthGate] init error: ${getErrorMessage(error)}`);
-      setGateState("error");
-    }
-
-    return () => {
-      // no teardown required for ready/expand
-    };
-  }, [setGateState]);
-
-  // Verify Telegram initData with backend once the anonymous session is ready.
+  // ── Telegram detection: poll every 50ms, give up after 1 000ms ──────────
   useEffect(() => {
     let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
 
-    async function runGate() {
-      if (telegramGateState === "needs_telegram") return;
-      if (isAuthLoading) return;
+    const startMs = Date.now();
+    const MAX_WAIT_MS = 1000;
+    const POLL_MS = 50;
 
-      if (!isAuthenticated || !authUserId) {
-        if (!cancelled) setGateState("error");
-        return;
-      }
-
-      if (isTelegramAuthenticated && telegramIdentity) {
-        if (!cancelled) setGateState("ready");
-        return;
-      }
-
-      const tg = window.Telegram?.WebApp;
-      if (!tg?.initData) {
-        if (!cancelled) setGateState("needs_telegram");
-        return;
-      }
-
-      if (hasAttemptedTelegramAuth.current) return;
-      hasAttemptedTelegramAuth.current = true;
-
-      clearAuthError();
-      if (!cancelled) setGateState("verifying");
-
-      try {
-        const success = await verifyTelegram(tg.initData);
-        if (!cancelled) setGateState(success ? "ready" : "error");
-      } catch (error) {
-        console.error(`[AuthGate] verify error: ${getErrorMessage(error)}`);
-        if (!cancelled) setGateState("error");
+    function applyTheme(tp: TgThemeParams | undefined) {
+      if (!tp) return;
+      const cssVars: Array<[string, string | undefined]> = [
+        ["--tg-bg-color", tp.bg_color],
+        ["--tg-text-color", tp.text_color],
+        ["--tg-secondary-bg-color", tp.secondary_bg_color],
+        ["--tg-button-color", tp.button_color],
+        ["--tg-button-text-color", tp.button_text_color],
+      ];
+      for (const [key, val] of cssVars) {
+        if (val) document.documentElement.style.setProperty(key, val);
       }
     }
 
-    void runGate();
+    debugLog("poll started", { hasStoredId: !!storedTelegramUserId });
+
+    function poll() {
+      if (cancelled) return;
+      try {
+        const tg = getTgWebApp();
+
+        // Detect presence of the WebApp object — do NOT require initData.
+        // initData may be empty in some Telegram contexts (e.g. preview mode)
+        // while the WebApp object itself is fully available.
+        if (tg) {
+          debugLog("telegram WebApp detected");
+          tg.ready?.();
+          tg.expand?.();
+          applyTheme(tg.themeParams);
+
+          const user = getTelegramUser();
+          debugLog("user resolved", {
+            hasUser: !!user,
+            userId: user?.id ?? null,
+            // Show what was pre-loaded from localStorage before WebApp injected
+            priorStoredId: storedTelegramUserId,
+          });
+          setTelegramUser(user);
+
+          // Persist Telegram user id to localStorage as a stable string fallback
+          if (user?.id) {
+            const idStr = String(user.id);
+            try {
+              localStorage.setItem(TG_USER_STORAGE_KEY, idStr);
+              debugLog("user id persisted to localStorage", { id: idStr });
+            } catch {
+              // Blocked in some private-browsing contexts — safe to ignore
+            }
+          }
+
+          if (!cancelled) {
+            debugLog("state transition: checking → in_telegram", {
+              hasUser: !!user,
+              userId: user?.id ?? null,
+            });
+            setCheckState("in_telegram");
+          }
+          return;
+        }
+
+        // Still waiting for WebApp injection
+        if (Date.now() - startMs >= MAX_WAIT_MS) {
+          if (!cancelled) {
+            debugLog("state transition: checking → needs_telegram (timeout)");
+            setCheckState("needs_telegram");
+          }
+          return;
+        }
+
+        timer = setTimeout(poll, POLL_MS);
+      } catch (err) {
+        // Always log real errors — not gated behind debug flag
+        console.error("[TedyTech] poll error:", err);
+        if (!cancelled) setCheckState("needs_telegram");
+      }
+    }
+
+    poll();
 
     return () => {
       cancelled = true;
+      if (timer !== undefined) clearTimeout(timer);
     };
-  }, [
-    telegramGateState,
-    isAuthLoading,
-    isAuthenticated,
-    authUserId,
-    isTelegramAuthenticated,
-    telegramIdentity,
-    clearAuthError,
-    setGateState,
-    verifyTelegram,
-  ]);
-
-  const closeWebApp = React.useCallback(() => {
-    const tg = window.Telegram?.WebApp;
-    if (tg?.close) tg.close();
   }, []);
 
-  // MainButton: show a default Close action while in Telegram
+  // ── Telegram MainButton: default close action ────────────────────────────
+  const closeWebApp = useCallback(() => {
+    try {
+      getTgWebApp()?.close?.();
+    } catch {
+      // ignore
+    }
+  }, []);
+
   useEffect(() => {
-    const tg = window.Telegram?.WebApp;
+    if (checkState !== "in_telegram") return;
+    const tg = getTgWebApp();
     const main = tg?.MainButton;
     if (!tg || !main) return;
-
     try {
       main.setText?.("Close");
       const handler = () => closeWebApp();
@@ -366,13 +413,40 @@ export function AppProvider({ children }: { children: ReactNode }) {
         main.offClick?.(handler);
         main.hide?.();
       };
-    } catch (error) {
-      console.warn(
-        `[AuthGate] MainButton error: ${getErrorMessage(error)}`,
-      );
+    } catch (err) {
+      console.warn("[TelegramDetect] MainButton error:", err);
     }
-  }, [closeWebApp]);
+  }, [checkState, closeWebApp]);
 
+  // ── Background Telegram verification ─────────────────────────────────────
+  // Fires once after Telegram is detected. Never blocks UI — on any failure
+  // we log a warning and carry on; verifiedCustomerId simply stays null.
+  useEffect(() => {
+    if (checkState !== "in_telegram") return;
+
+    const initData = getTgWebApp()?.initData ?? "";
+    if (!initData.trim()) {
+      // initData is empty in some preview/test contexts — skip silently.
+      debugLog("background verify: no initData, skipping");
+      return;
+    }
+
+    debugLog("background verify: starting");
+    verifyTelegramUserMutation({ initData })
+      .then((result) => {
+        const id = String(result.customerId);
+        setVerifiedCustomerId(id);
+        debugLog("background verify: complete", { customerId: id });
+      })
+      .catch((err: unknown) => {
+        // Non-fatal: initData may be expired or TELEGRAM_BOT_TOKEN not set yet.
+        // UX is already running — log and continue.
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn("[TedyTech] Background Telegram verification failed:", msg);
+      });
+  }, [checkState, verifyTelegramUserMutation]);
+
+  // ── Favorites helpers ────────────────────────────────────────────────────
   const toggleSaved = useCallback(
     (id: string) => {
       if (favoritePhoneIds.includes(id)) {
@@ -410,37 +484,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
     selectedConditions.length > 0 ||
     sortOption !== "newest";
 
-  if (telegramGateState !== "ready") {
-    return (
-      <AuthGateScreen
-        state={telegramGateState}
-        errorMessage={authError}
-        onRetry={retryTelegramAuth}
-      />
-    );
-  }
+  // ── Gate render ──────────────────────────────────────────────────────────
 
+  // Default: show loading immediately (no blank frame)
+  if (checkState === "checking") return <LoadingScreen />;
+
+  // Last resort: show gate only after 1000ms timeout
+  if (checkState === "needs_telegram") return <NeedsTelegramScreen />;
+
+  // In Telegram — render the full app
   return (
     <AppContext.Provider
       value={{
-        // Auth
-        authUserId,
-        isAuthLoading,
-        isAuthenticated,
-        isTelegramAuthenticated,
-        customerId: telegramIdentity?.customerId ?? null,
-        telegramUserId: telegramIdentity?.telegramUserId ?? null,
-        telegramUsername: telegramIdentity?.username ?? null,
+        // Telegram identity
+        telegramUser,
+        telegramUserId: telegramUser?.id ?? null,
+        telegramUsername: telegramUser?.username ?? null,
 
-        // Legacy session compat
+        // Auth — backwards-compatible shape
+        authUserId: sessionId,
+        isAuthLoading: isSessionLoading,
+        isAuthenticated: !!sessionId,
+        // Always true here: we only render children when in_telegram
+        isTelegramAuthenticated: true,
+        // Populated once background initData verification completes
+        customerId: verifiedCustomerId,
+        verifiedCustomerId,
+
+        // Legacy session support
         sessionId,
         isSessionLoading,
-        isInTelegram,
+        isInTelegram: true,
         closeWebApp,
 
+        // Favorites
         favoritePhoneIds,
         toggleSaved,
         isSaved,
+
+        // Filters
         selectedBrands,
         setSelectedBrands,
         selectedBudget,

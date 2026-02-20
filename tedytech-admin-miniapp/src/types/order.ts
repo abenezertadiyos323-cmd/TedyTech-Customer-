@@ -15,6 +15,33 @@ export interface PhoneAction {
 }
 
 /**
+ * Admin order type
+ */
+export interface AdminOrder {
+  _id: string;
+  _creationTime: number;
+  sellerId: string;
+  status: AdminOrderStatus;
+  createdAt: number;
+  updatedAt?: number;
+  customerName?: string;
+  customerPhone?: string;
+  customerTelegramUserId?: string;
+  itemSummary?: string;
+  itemCount?: number;
+  totalAmount?: number;
+}
+
+/**
+ * Admin order status
+ */
+export type AdminOrderStatus =
+  | "pending"
+  | "confirmed"
+  | "delivered"
+  | "cancelled";
+
+/**
  * Exchange request type matching Convex schema
  */
 export interface ExchangeRequest {

@@ -17,8 +17,17 @@ export function StatusBadge({ status, variant = "order", showDot = true, classNa
     const statusLower = status.toLowerCase();
     if (statusLower === "new") return "status-dot-new";
     if (statusLower === "pending") return "status-dot-pending";
-    if (statusLower === "completed" || statusLower === "active") return "status-dot-completed";
-    if (statusLower === "rejected" || statusLower === "archived") return "status-dot-rejected";
+    if (
+      statusLower === "completed" ||
+      statusLower === "active" ||
+      statusLower === "confirmed" ||
+      statusLower === "delivered"
+    ) {
+      return "status-dot-completed";
+    }
+    if (statusLower === "rejected" || statusLower === "archived" || statusLower === "cancelled") {
+      return "status-dot-rejected";
+    }
     return "status-dot-new";
   };
 

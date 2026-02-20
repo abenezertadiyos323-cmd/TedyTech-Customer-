@@ -50,13 +50,22 @@ export function getStatusVariant(
 ): "default" | "success" | "warning" | "destructive" {
   const statusLower = status.toLowerCase();
 
-  if (statusLower === "active" || statusLower === "completed") {
+  if (
+    statusLower === "active" ||
+    statusLower === "completed" ||
+    statusLower === "confirmed" ||
+    statusLower === "delivered"
+  ) {
     return "success";
   }
   if (statusLower === "pending") {
     return "warning";
   }
-  if (statusLower === "rejected" || statusLower === "archived") {
+  if (
+    statusLower === "rejected" ||
+    statusLower === "archived" ||
+    statusLower === "cancelled"
+  ) {
     return "destructive";
   }
   return "default";

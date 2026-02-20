@@ -170,7 +170,7 @@ localStorage.setItem("admin_token", token);
 **From n8n (Telegram bot):**
 ```javascript
 // In n8n HTTP Request node
-POST https://original-ram-766.convex.cloud/api/mutations/sellers/authenticateWithTelegram
+POST https://clever-partridge-181.convex.cloud/api/mutations/sellers/authenticateWithTelegram
 Content-Type: application/json
 
 {

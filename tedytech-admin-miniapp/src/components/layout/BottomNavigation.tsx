@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { TabType } from "@/types/admin";
-import { Home, Package, ShoppingCart, Inbox } from "lucide-react";
+import { Home, Package, ShoppingCart, Inbox, History } from "lucide-react";
 import { Tabbar, TabbarLink } from "konsta/react";
 
 interface BottomNavigationProps {
@@ -22,7 +22,8 @@ export function BottomNavigation({
     { id: "dashboard", label: "Home", icon: Home },
     { id: "inventory", label: "Inventory", icon: Package },
     { id: "orders", label: "Orders", icon: ShoppingCart },
-    { id: "inbox", label: "Inbox", icon: Inbox },
+    { id: "inbox", label: "Leads", icon: Inbox },
+    { id: "activity", label: "Activity", icon: History },
   ];
 
   return (

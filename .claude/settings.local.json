@@ -37,7 +37,20 @@
       "Bash(git commit:*)",
       "Bash(npx tsc:*)",
       "Bash(git mv:*)",
-      "Bash(npx convex deploy:*)"
+      "Bash(npx convex deploy:*)",
+      "Bash(CONVEX_DEPLOYMENT=prod:clever-partridge-181 npx convex deploy:*)",
+      "Bash(CONVEX_DEPLOYMENT=prod:clever-partridge-181 npx convex codegen:*)",
+      "Bash(git -C:*)",
+      "Bash(echo:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(where:*)",
+      "Bash(npx pnpm:*)",
+      "Bash(node -e:*)",
+      "Bash(corepack pnpm:*)",
+      "Bash(git reset:*)",
+      "Bash(node_modules/.bin/tsc:*)",
+      "Bash(node_modules/.bin/vite build:*)",
+      "Bash(python3:*)"
     ]
   }
 }

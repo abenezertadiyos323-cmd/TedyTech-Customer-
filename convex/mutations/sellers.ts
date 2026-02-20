@@ -1,6 +1,10 @@
-import { mutation } from "../_generated/server";
+import { mutation, query } from "../_generated/server";
 import { v } from "convex/values";
-import { generateToken, getSessionExpiration } from "../lib/auth/adminAuth";
+import {
+  generateToken,
+  getSessionExpiration,
+  requireAdmin,
+} from "../lib/auth/adminAuth";
 
 /**
  * Seller mutations for custom Convex-based authentication and session management
@@ -30,8 +34,7 @@ export const authenticateWithTelegram = mutation({
     let resolvedSeller = seller;
     if (!resolvedSeller) {
       // Allow bootstrap via environment variable ADMIN_CHAT_ID for a single admin
-      const ADMIN_CHAT_ID =
-        process.env.ADMIN_CHAT_ID || process.env.VITE_ADMIN_CHAT_ID;
+      const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
       if (ADMIN_CHAT_ID && ADMIN_CHAT_ID === args.telegramId) {
         // Create a lightweight admin seller record
         const now = Date.now();
@@ -95,9 +98,11 @@ export const authenticateWithTelegram = mutation({
 
 export const createSession = mutation({
   args: {
+    token: v.string(),
     sellerId: v.id("sellers"),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.token);
     const seller = await ctx.db.get(args.sellerId);
     if (!seller || !seller.isActive) {
       throw new Error("Invalid seller");
@@ -142,6 +147,7 @@ export const revokeSession = mutation({
 
 export const createSeller = mutation({
   args: {
+    token: v.string(),
     telegramId: v.string(),
     username: v.optional(v.string()),
     firstName: v.optional(v.string()),
@@ -157,6 +163,7 @@ export const createSeller = mutation({
     role: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.token);
     // Check if telegramId already exists
     const existing = await ctx.db
       .query("sellers")
@@ -188,5 +195,27 @@ export const createSeller = mutation({
     });
 
     return sellerId;
+  },
+});
+
+/**
+ * Diagnostic query: returns the current seller record for the authenticated admin.
+ * Used for startup diagnostics to verify seller identity and sellerId.
+ */
+export const getSeller = query({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const { sellerId, role } = await requireAdmin(ctx, args.token);
+    const seller = (await ctx.db.get(sellerId)) as any;
+    if (!seller) return null;
+    return {
+      id: String(seller._id),
+      telegramId: String(seller.telegramId ?? ""),
+      businessName: String(seller.businessName ?? ""),
+      businessType: String(seller.businessType ?? ""),
+      role: String(role ?? seller.role ?? ""),
+      isActive: Boolean(seller.isActive),
+      createdAt: Number(seller.createdAt),
+    };
   },
 });

@@ -1,5 +1,4 @@
 import { useState, lazy, Suspense } from 'react';
-import { AppProvider } from '@/contexts/AppContext';
 import { BottomNavigation } from '@/components/BottomNavigation';
 import { cn } from '@/lib/utils';
 // Lazy load tab components to reduce initial bundle size
@@ -41,37 +40,35 @@ const Index = () => {
   };
 
   return (
-    <AppProvider>
-      <div className="max-w-lg mx-auto bg-background min-h-screen relative overflow-hidden">
-        {/* Tab Content with transitions */}
-        <div 
-          className={cn(
-            "transition-all duration-300 ease-out",
-            isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+    <div className="max-w-lg mx-auto bg-background min-h-screen relative overflow-hidden">
+      {/* Tab Content with transitions */}
+      <div 
+        className={cn(
+          "transition-all duration-300 ease-out",
+          isTransitioning ? "opacity-0 translate-y-2" : "opacity-100 translate-y-0"
+        )}
+      >
+        <Suspense fallback={<div className="min-h-screen bg-background pb-24"><div className="flex items-center justify-center pt-40"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div></div>}>
+          {activeTab === 'home' && (
+            <HomeTab 
+              key={homeKey}
+              onNavigateToExchange={handleNavigateToExchange}
+              onNavigateToAbout={handleNavigateToAbout}
+              onNavigateToSaved={handleNavigateToSaved}
+            />
           )}
-        >
-          <Suspense fallback={<div className="min-h-screen bg-background pb-24"><div className="flex items-center justify-center pt-40"><div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" /></div></div>}>
-            {activeTab === 'home' && (
-              <HomeTab 
-                key={homeKey}
-                onNavigateToExchange={handleNavigateToExchange}
-                onNavigateToAbout={handleNavigateToAbout}
-                onNavigateToSaved={handleNavigateToSaved}
-              />
-            )}
-            {activeTab === 'saved' && (
-              <SavedTab onNavigateToExchange={handleNavigateToExchange} />
-            )}
-            {activeTab === 'exchange' && <ExchangeTab />}
-            {activeTab === 'about' && <AboutTab />}
-            {activeTab === 'earn' && <EarnTab />}
-          </Suspense>
-        </div>
-
-        {/* Bottom Navigation */}
-        <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+          {activeTab === 'saved' && (
+            <SavedTab onNavigateToExchange={handleNavigateToExchange} />
+          )}
+          {activeTab === 'exchange' && <ExchangeTab />}
+          {activeTab === 'about' && <AboutTab />}
+          {activeTab === 'earn' && <EarnTab />}
+        </Suspense>
       </div>
-    </AppProvider>
+
+      {/* Bottom Navigation */}
+      <BottomNavigation activeTab={activeTab} onTabChange={handleTabChange} />
+    </div>
   );
 };
 

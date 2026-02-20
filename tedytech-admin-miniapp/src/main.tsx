@@ -12,7 +12,6 @@ import {
   type QueryDebugDetail,
 } from "@/lib/queryDebug";
 import { AppWithConvexStatus } from "@/components/AppWithConvexStatus";
-import { api } from "convex_generated/api";
 import App from "./App";
 import "./index.css";
 
@@ -32,7 +31,6 @@ type StartupDiagnostics = {
   appEnvironment: string;
   convexUrlExists: boolean;
   convexHostname: string;
-  adminChatIdExists: boolean;
   telegramWebAppExists: boolean;
   adminTokenPresent: "true" | "false" | "unknown";
   queryArgsType: "object" | "string" | "unknown";
@@ -60,7 +58,6 @@ const diagnostics: StartupDiagnostics = {
   appEnvironment: getEnvString(import.meta.env.VITE_APP_ENVIRONMENT),
   convexUrlExists: Boolean(getEnvString(import.meta.env.VITE_CONVEX_URL)),
   convexHostname: getConvexHostname(getEnvString(import.meta.env.VITE_CONVEX_URL)),
-  adminChatIdExists: Boolean(getEnvString(import.meta.env.VITE_ADMIN_CHAT_ID)),
   telegramWebAppExists: Boolean(window.Telegram?.WebApp),
   adminTokenPresent: "unknown",
   queryArgsType: "unknown",
@@ -169,7 +166,6 @@ const renderDiagnosticsOverlay = () => {
         ? `present (hostname=${quote(diagnostics.convexHostname || "invalid")})`
         : "missing"
     }`,
-    `VITE_ADMIN_CHAT_ID: ${diagnostics.adminChatIdExists ? "present" : "missing"}`,
     `window.Telegram?.WebApp: ${diagnostics.telegramWebAppExists ? "present" : "missing"}`,
     `adminToken_present: ${diagnostics.adminTokenPresent}`,
     `query_args_type: ${diagnostics.queryArgsType}`,
@@ -278,21 +274,6 @@ const renderRuntimeFallback = (
   renderStartupMessage(title, message, [], details);
 };
 
-/**
- * Pings Convex using a real query (health.ping) instead of raw fetch.
- * This avoids CORS issues in Telegram WebView and provides a true health check.
- */
-const pingConvex = async (client: ConvexReactClient) => {
-  try {
-    const result = await client.query(api.health.ping, {});
-    if (result && result.status === "ok") {
-      return { ok: true as const };
-    }
-    return { ok: false as const, error: "Health check returned invalid response" };
-  } catch (error) {
-    return { ok: false as const, error: formatError(error).message };
-  }
-};
 
 const initOverlayErrorHooks = () => {
   window.addEventListener("error", (event) => {
@@ -346,7 +327,6 @@ const bootstrap = async () => {
     prod: diagnostics.prod,
     appEnvironment: diagnostics.appEnvironment,
     convexHostname: diagnostics.convexHostname || "missing",
-    adminChatIdExists: diagnostics.adminChatIdExists,
     telegramWebAppExists: diagnostics.telegramWebAppExists,
   });
 
@@ -354,7 +334,6 @@ const bootstrap = async () => {
   diagnostics.appEnvironment = config.VITE_APP_ENVIRONMENT;
   diagnostics.convexUrlExists = Boolean(config.VITE_CONVEX_URL);
   diagnostics.convexHostname = getConvexHostname(config.VITE_CONVEX_URL);
-  diagnostics.adminChatIdExists = Boolean(config.VITE_ADMIN_CHAT_ID);
   renderDiagnosticsOverlay();
 
   if (!isValid) {
@@ -362,7 +341,6 @@ const bootstrap = async () => {
     logError("Environment validation failed", {
       errors,
       convexHostname: diagnostics.convexHostname || "invalid",
-      adminChatIdExists: diagnostics.adminChatIdExists,
     });
 
     renderStartupMessage(
@@ -372,8 +350,6 @@ const bootstrap = async () => {
         ...errors,
         `VITE_CONVEX_URL raw: ${quote(raw.VITE_CONVEX_URL)}`,
         `VITE_CONVEX_URL trimmed: ${quote(config.VITE_CONVEX_URL)}`,
-        `VITE_ADMIN_CHAT_ID raw: ${quote(raw.VITE_ADMIN_CHAT_ID)}`,
-        `VITE_ADMIN_CHAT_ID trimmed: ${quote(config.VITE_ADMIN_CHAT_ID)}`,
         `VITE_APP_ENVIRONMENT trimmed: ${quote(config.VITE_APP_ENVIRONMENT)}`,
       ],
     );
@@ -402,28 +378,12 @@ const bootstrap = async () => {
     return;
   }
 
-  // Ping Convex with health check query (non-blocking)
-  logInfo("Pinging Convex deployment", {
+  // Convex connectivity is checked reactively inside the app via useQuery(api.health.health).
+  diagnostics.convexPingStatus = "pending";
+  renderDiagnosticsOverlay();
+  logInfo("Convex client created — connectivity checked reactively in app", {
     convexHostname: diagnostics.convexHostname || "invalid",
   });
-  const pingResult = await pingConvex(convex);
-  if (!pingResult.ok) {
-    diagnostics.convexPingStatus = "failed";
-    diagnostics.convexPingError = pingResult.error;
-    renderDiagnosticsOverlay();
-    logError("Convex ping failed (non-blocking)", {
-      convexHostname: diagnostics.convexHostname || "invalid",
-      error: pingResult.error,
-    });
-    // Don't block startup - we'll show a banner instead
-  } else {
-    diagnostics.convexPingStatus = "ok";
-    diagnostics.convexPingError = "";
-    renderDiagnosticsOverlay();
-    logInfo("Convex ping succeeded", {
-      convexHostname: diagnostics.convexHostname || "invalid",
-    });
-  }
 
   if (!window.Telegram?.WebApp) {
     appendStartupError("window.Telegram.WebApp is missing");
@@ -432,7 +392,6 @@ const bootstrap = async () => {
       url: window.location.href,
       appEnvironment: diagnostics.appEnvironment,
       convexHostname: diagnostics.convexHostname || "missing",
-      adminChatIdExists: diagnostics.adminChatIdExists,
     });
     renderStartupMessage(
       "Telegram Context Required",
@@ -441,7 +400,6 @@ const bootstrap = async () => {
         `Current URL: ${quote(window.location.href)}`,
         `VITE_APP_ENVIRONMENT: ${quote(diagnostics.appEnvironment)}`,
         `VITE_CONVEX_URL hostname: ${quote(diagnostics.convexHostname || "missing")}`,
-        `VITE_ADMIN_CHAT_ID exists: ${diagnostics.adminChatIdExists ? "true" : "false"}`,
       ],
     );
     convex.close();
@@ -450,17 +408,12 @@ const bootstrap = async () => {
 
   logInfo("Rendering app", {
     convexPingStatus: diagnostics.convexPingStatus,
-    willShowBanner: !pingResult.ok,
   });
   getAppRoot().render(
     <React.StrictMode>
       <ErrorBoundary>
         <ConvexProvider client={convex}>
-          <AppWithConvexStatus
-            convexClient={convex}
-            initialPingFailed={!pingResult.ok}
-            initialError={pingResult.ok ? "" : pingResult.error}
-          >
+          <AppWithConvexStatus>
             <KonstaProvider theme="ios">
               <AdminProvider>
                 <App />

@@ -1,39 +1,73 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/orders/StatusBadge";
-import { cn, formatPrice, formatDateTime } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { formatDateTime } from "@/lib/utils";
 import type { ExchangeRequest } from "@/types/order";
-import { X, ArrowRight, Check, XCircle } from "lucide-react";
-import { useMutation } from "convex/react";
-import { api } from "convex_generated/api";
-import { useState } from "react";
+import { Loader2, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import type { ExchangeStatus } from "@/hooks/useExchanges";
 
 interface ExchangeDetailSheetProps {
   exchange: ExchangeRequest | null;
+  onUpdate: (exchangeId: string, status: ExchangeStatus, valuationNote?: string) => Promise<void>;
   onClose: () => void;
 }
 
-export function ExchangeDetailSheet({ exchange, onClose }: ExchangeDetailSheetProps) {
-  const updateStatus = useMutation(api.phoneActions.updateExchangeStatus);
+const STATUS_OPTIONS: ExchangeStatus[] = [
+  "pending",
+  "reviewing",
+  "approved",
+  "rejected",
+  "completed",
+];
+
+const normalizeStatus = (status: unknown): ExchangeStatus => {
+  if (typeof status === "string" && STATUS_OPTIONS.includes(status as ExchangeStatus)) {
+    return status as ExchangeStatus;
+  }
+  return "pending";
+};
+
+export function ExchangeDetailSheet({ exchange, onUpdate, onClose }: ExchangeDetailSheetProps) {
+  const [status, setStatus] = useState<ExchangeStatus>("pending");
+  const [valuationNote, setValuationNote] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!exchange) return null;
 
-  const handleStatusUpdate = async (newStatus: string) => {
+  useEffect(() => {
+    if (!exchange) {
+      return;
+    }
+    setStatus(normalizeStatus(exchange.status));
+    setValuationNote((exchange as any).valuationNote || "");
+    setError(null);
+    setIsUpdating(false);
+  }, [exchange]);
+
+  const handleUpdate = async () => {
     setIsUpdating(true);
+    setError(null);
     try {
-      await updateStatus({ requestId: exchange._id as any, status: newStatus });
+      await onUpdate(exchange._id, status, valuationNote);
       onClose();
     } catch (error) {
-      console.error("Failed to update exchange status:", error);
+      setError((error as Error).message || "Failed to update exchange.");
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const canApprove = exchange.status === "new" || exchange.status === "pending";
-  const canReject = exchange.status === "new" || exchange.status === "pending";
-  const canMarkPending = exchange.status === "new";
+  const customerLabel =
+    (exchange as any).customerName ||
+    (exchange as any).customerPhone ||
+    (exchange as any).customerTelegramUserId ||
+    (exchange.sessionId ? `Session ${exchange.sessionId.substring(0, 12)}...` : "Unknown customer");
+  const offeredDevice = (exchange as any).offeredDevice || exchange.offeredModel || "Unknown device";
+  const requestedDevice =
+    (exchange as any).requestedDevice || exchange.desiredPhoneName || "Unknown device";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
@@ -53,40 +87,40 @@ export function ExchangeDetailSheet({ exchange, onClose }: ExchangeDetailSheetPr
         <div className="p-4 space-y-4">
           {/* Header */}
           <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold flex-1">Exchange Request</h2>
-            <StatusBadge status={exchange.status} variant="exchange" />
+            <h2 className="text-xl font-bold flex-1">Exchange</h2>
+            <StatusBadge status={status} variant="exchange" />
           </div>
 
-          {/* Exchange Flow */}
+          {error && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
           <Card className="admin-card">
             <CardContent className="p-4 space-y-4">
-              {/* Offered Device */}
+              <div>
+                <p className="text-xs text-muted-foreground font-medium mb-1">Customer</p>
+                <p className="font-semibold">{customerLabel}</p>
+                {(exchange as any).customerPhone && (
+                  <p className="text-sm text-muted-foreground mt-0.5">{(exchange as any).customerPhone}</p>
+                )}
+              </div>
+
               <div>
                 <p className="text-xs text-muted-foreground font-medium mb-1">Offering</p>
-                <p className="font-semibold">{exchange.offeredModel}</p>
-                <p className="text-sm text-muted-foreground">
-                  {exchange.offeredStorageGb}GB &middot; {exchange.offeredCondition}
-                </p>
+                <p className="font-semibold">{offeredDevice}</p>
+                {exchange.offeredCondition && (
+                  <p className="text-sm text-muted-foreground">{exchange.offeredCondition}</p>
+                )}
               </div>
-
-              <div className="flex justify-center">
-                <ArrowRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-
-              {/* Desired Device */}
               <div>
                 <p className="text-xs text-muted-foreground font-medium mb-1">Wants</p>
-                <p className="font-semibold">{exchange.desiredPhoneName || "Unknown Phone"}</p>
-                {exchange.desiredPhonePrice && (
-                  <p className="text-sm font-bold text-primary mt-1">
-                    {formatPrice(exchange.desiredPhonePrice)}
-                  </p>
-                )}
+                <p className="font-semibold">{requestedDevice}</p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Notes */}
           {exchange.offeredNotes && (
             <Card className="admin-card">
               <CardContent className="p-4">
@@ -96,54 +130,57 @@ export function ExchangeDetailSheet({ exchange, onClose }: ExchangeDetailSheetPr
             </Card>
           )}
 
-          {/* Metadata */}
           <Card className="admin-card">
-            <CardContent className="p-3 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Session</span>
-                <span className="font-mono text-xs">{exchange.sessionId.substring(0, 20)}...</span>
+            <CardContent className="p-4 space-y-3">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-medium">Status</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {STATUS_OPTIONS.map((option) => (
+                    <Button
+                      key={option}
+                      variant={status === option ? "default" : "outline"}
+                      size="sm"
+                      className="min-h-[36px]"
+                      onClick={() => setStatus(option)}
+                      disabled={isUpdating}
+                    >
+                      {option}
+                    </Button>
+                  ))}
+                </div>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Created</span>
+
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground font-medium">Valuation Note</p>
+                <Input
+                  value={valuationNote}
+                  onChange={(event) => setValuationNote(event.target.value)}
+                  placeholder="Add valuation note"
+                  disabled={isUpdating}
+                />
+              </div>
+
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Created</span>
                 <span>{formatDateTime(exchange.createdAt)}</span>
               </div>
             </CardContent>
           </Card>
 
-          {/* Action Buttons */}
-          {(canApprove || canReject) && (
-            <div className="flex gap-3 pt-2">
-              {canMarkPending && (
-                <Button
-                  variant="outline"
-                  className="flex-1 min-h-[44px]"
-                  onClick={() => handleStatusUpdate("pending")}
-                  disabled={isUpdating}
-                >
-                  Mark Pending
-                </Button>
-              )}
-              {canApprove && (
-                <Button
-                  className="flex-1 min-h-[44px] bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => handleStatusUpdate("completed")}
-                  disabled={isUpdating}
-                >
-                  <Check className="h-4 w-4 mr-1" /> Approve
-                </Button>
-              )}
-              {canReject && (
-                <Button
-                  variant="destructive"
-                  className="flex-1 min-h-[44px]"
-                  onClick={() => handleStatusUpdate("rejected")}
-                  disabled={isUpdating}
-                >
-                  <XCircle className="h-4 w-4 mr-1" /> Reject
-                </Button>
-              )}
-            </div>
-          )}
+          <Button
+            className="w-full min-h-[44px]"
+            onClick={() => void handleUpdate()}
+            disabled={isUpdating}
+          >
+            {isUpdating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                Saving...
+              </>
+            ) : (
+              "Save Exchange Update"
+            )}
+          </Button>
 
           {/* Spacer for bottom safe area */}
           <div className="h-4" />

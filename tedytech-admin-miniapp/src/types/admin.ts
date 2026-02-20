@@ -13,7 +13,14 @@ export interface AdminUser {
  */
 export interface Activity {
   id: string;
-  type: "search" | "phone_action" | "exchange_request";
+  type:
+    | "product"
+    | "order"
+    | "exchange"
+    | "hotLead"
+    | "search"
+    | "phone_action"
+    | "exchange_request";
   description: string;
   timestamp: number;
   sessionId?: string;
@@ -49,4 +56,9 @@ export interface Filters {
 /**
  * Tab type for navigation
  */
-export type TabType = "dashboard" | "inventory" | "orders" | "inbox";
+export type TabType =
+  | "dashboard"
+  | "inventory"
+  | "orders"
+  | "inbox"
+  | "activity";

@@ -1,21 +1,31 @@
 import { useQuery } from "convex/react";
 import { api } from "convex_generated/api";
+import { useAdmin } from "@/contexts/AdminContext";
 import type { Product } from "@/types/product";
-import { mockProducts } from "@/data/mockData";
 
 /**
  * Fetch all products for admin view
  */
 export function useProducts() {
-  const convexProducts = useQuery(api.products.listAllProducts);
+  const { adminToken, isAuthorized } = useAdmin();
+  const convexProducts = useQuery(
+    api.products.listAdminProducts,
+    adminToken ? { token: adminToken } : "skip",
+  );
 
-  // Fallback to mock data if Convex data is unavailable
-  const products = (convexProducts ?? mockProducts) as Product[];
+  const products = (convexProducts ?? []) as Product[];
+  const isLoading = Boolean(adminToken) && convexProducts === undefined;
+  const error =
+    isAuthorized === false
+      ? "Unauthorized access."
+      : !adminToken && isAuthorized === true
+        ? "Admin session unavailable. Reopen the mini app."
+        : null;
 
   return {
     data: products,
-    isLoading: convexProducts === undefined,
-    error: null,
+    isLoading,
+    error,
   };
 }
 
@@ -29,7 +39,7 @@ export function useFilteredProducts(filters: {
   sortBy?: "name" | "price" | "createdAt";
   sortOrder?: "asc" | "desc";
 }) {
-  const { data: allProducts, isLoading } = useProducts();
+  const { data: allProducts, isLoading, error } = useProducts();
 
   // Apply filters
   let filtered = [...allProducts];
@@ -80,7 +90,7 @@ export function useFilteredProducts(filters: {
   return {
     data: filtered,
     isLoading,
-    error: null,
+    error,
   };
 }
 
@@ -88,7 +98,7 @@ export function useFilteredProducts(filters: {
  * Get product statistics for dashboard
  */
 export function useProductStats() {
-  const { data: products, isLoading } = useProducts();
+  const { data: products, isLoading, error } = useProducts();
 
   const stats = {
     totalProducts: products.length,
@@ -102,5 +112,6 @@ export function useProductStats() {
   return {
     data: stats,
     isLoading,
+    error,
   };
 }

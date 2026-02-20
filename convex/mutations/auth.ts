@@ -112,6 +112,61 @@ async function verifyInitData(initData: string, botToken: string) {
   return parseTelegramUser(userRaw);
 }
 
+/**
+ * Background verification for the Customer Mini App.
+ *
+ * Performs the identical HMAC-SHA256 initData verification as loginWithTelegram,
+ * then upserts a `customers` record server-side.
+ *
+ * Designed to be called fire-and-forget from AppContext after Telegram is
+ * detected — it never blocks UI rendering.  Returns a minimal payload
+ * (just the persisted Convex document ID) suitable for caching on the client.
+ *
+ * Security: spoofing is prevented because the hash is HMAC-SHA256 keyed with
+ * HMAC("WebAppData", BOT_TOKEN) — an attacker who doesn't know BOT_TOKEN
+ * cannot forge a valid hash for any user.id they choose.
+ */
+export const verifyTelegramUser = mutation({
+  args: {
+    initData: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    if (!botToken) {
+      throw new Error("Server configuration missing TELEGRAM_BOT_TOKEN");
+    }
+
+    const user = await verifyInitData(args.initData, botToken);
+    const now = Date.now();
+
+    const existing = await ctx.db
+      .query("customers")
+      .withIndex("by_telegramUserId", (q) => q.eq("telegramUserId", user.id))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        username: user.username,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        updatedAt: now,
+      });
+      return { ok: true as const, customerId: existing._id };
+    }
+
+    const customerId = await ctx.db.insert("customers", {
+      telegramUserId: user.id,
+      username: user.username,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { ok: true as const, customerId };
+  },
+});
+
 export const loginWithTelegram = mutation({
   args: {
     initData: v.string(),

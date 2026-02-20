@@ -2,7 +2,7 @@
 import { ConvexClient } from "convex/browser";
 
 // Note: This needs to be run with proper environment setup
-const DEPLOYMENT_URL = "https://original-ram-766.convex.cloud";
+const DEPLOYMENT_URL = "https://clever-partridge-181.convex.cloud";
 
 async function seed() {
   console.log("Seeding test data...");

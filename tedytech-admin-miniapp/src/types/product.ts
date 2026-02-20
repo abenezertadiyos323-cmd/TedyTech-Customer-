@@ -12,6 +12,7 @@ export interface Product {
   category?: string;
   tags?: string[];
   status: "active" | "draft" | "archived";
+  inStock?: boolean;
   isFeatured: boolean;
   isNewArrival: boolean;
   isPopular: boolean;

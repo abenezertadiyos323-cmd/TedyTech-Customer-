@@ -3,7 +3,7 @@
  * Seed test data into Convex using the HTTP API
  */
 
-const CONVEX_URL = "https://original-ram-766.convex.cloud";
+const CONVEX_URL = "https://clever-partridge-181.convex.cloud";
 
 async function callConvex(functionName, args) {
   const url = `${CONVEX_URL}/api/call/${functionName}`;

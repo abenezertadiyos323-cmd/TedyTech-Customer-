@@ -11,23 +11,48 @@ import { useExchangeStats } from "@/hooks/useExchanges";
 import { useRecentActivity } from "@/hooks/useActivity";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { useAdmin } from "@/contexts/AdminContext";
+import {
+  DEMO_MODE,
+  getDashboardDemoActivities,
+  getDashboardDemoExchangeStats,
+  getDashboardDemoHotLeads,
+  getDashboardDemoPhoneActionStats,
+  getDashboardDemoProductStats,
+  getDemoModeLabel,
+} from "@/lib/demoData";
 import { Package, Activity } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { Block } from "konsta/react";
 
 export function DashboardTab() {
   const { setActiveTab } = useAdmin();
-  const { data: hotLeads, isLoading: hotLeadsLoading } = useHotLeads(10);
-  const { data: productStats } = useProductStats();
-  const { data: actionStats } = usePhoneActionStats();
-  const { data: exchangeStats } = useExchangeStats();
-  const { data: activities } = useRecentActivity(5);
+  const { data: hotLeadsData, isLoading: hotLeadsLoadingData } = useHotLeads(10);
+  const { data: productStatsData } = useProductStats();
+  const { data: actionStatsData } = usePhoneActionStats();
+  const { data: exchangeStatsData } = useExchangeStats();
+  const { data: activitiesData } = useRecentActivity(5);
   const { isOnline, lastSyncTime } = useNetworkStatus();
+
+  const hotLeads = DEMO_MODE ? getDashboardDemoHotLeads(10) : hotLeadsData;
+  const hotLeadsLoading = DEMO_MODE ? false : hotLeadsLoadingData;
+  const productStats = DEMO_MODE
+    ? getDashboardDemoProductStats()
+    : productStatsData;
+  const actionStats = DEMO_MODE
+    ? getDashboardDemoPhoneActionStats()
+    : actionStatsData;
+  const exchangeStats = DEMO_MODE
+    ? getDashboardDemoExchangeStats()
+    : exchangeStatsData;
+  const activities = DEMO_MODE ? getDashboardDemoActivities(5) : activitiesData;
 
   const todayActivity = actionStats.todayActions + exchangeStats.todayExchanges;
 
   return (
     <div className="pb-20 space-y-4">
+      {getDemoModeLabel() ? (
+        <p className="px-4 text-xs text-muted-foreground">{getDemoModeLabel()}</p>
+      ) : null}
       {/* Offline Indicator (Priority 0 - Critical Status) */}
       {!isOnline && <OfflineIndicator />}
 

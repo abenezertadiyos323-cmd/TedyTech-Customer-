@@ -23,7 +23,7 @@ export function OrderTabs({
     <Tabs defaultValue={defaultTab} className={cn("w-full", className)}>
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="actions" className="relative">
-          Phone Actions
+          Orders
           {actionsCount !== undefined && actionsCount > 0 && (
             <span className="ml-2 rounded-full bg-primary/10 text-primary px-2 py-0.5 text-xs font-semibold">
               {actionsCount}

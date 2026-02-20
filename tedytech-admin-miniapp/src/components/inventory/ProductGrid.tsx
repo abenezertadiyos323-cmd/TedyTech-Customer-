@@ -2,11 +2,12 @@ import { ProductCard } from "@/components/inventory/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
-import { Package } from "lucide-react";
+import { AlertCircle, Package } from "lucide-react";
 
 interface ProductGridProps {
   products: Product[];
   isLoading?: boolean;
+  error?: string | null;
   onProductClick?: (product: Product) => void;
   className?: string;
 }
@@ -24,13 +25,31 @@ function ProductCardSkeleton() {
   );
 }
 
-export function ProductGrid({ products, isLoading = false, onProductClick, className }: ProductGridProps) {
+export function ProductGrid({
+  products,
+  isLoading = false,
+  error = null,
+  onProductClick,
+  className,
+}: ProductGridProps) {
   if (isLoading) {
     return (
       <div className={cn("grid grid-cols-2 gap-3", className)}>
         {Array.from({ length: 4 }).map((_, i) => (
           <ProductCardSkeleton key={i} />
         ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="rounded-full bg-destructive/10 p-4 mb-4">
+          <AlertCircle className="h-8 w-8 text-destructive" />
+        </div>
+        <p className="font-semibold">Failed to load products</p>
+        <p className="text-sm text-muted-foreground mt-1">{error}</p>
       </div>
     );
   }

@@ -46,6 +46,9 @@ export function ProductCard({ product, onClick, className }: ProductCardProps) {
         {product.category && (
           <p className="text-xs text-muted-foreground mt-1">{product.category}</p>
         )}
+        {product.inStock === false && (
+          <p className="text-xs text-destructive mt-1">Out of stock</p>
+        )}
       </CardContent>
     </Card>
   );
