@@ -31,7 +31,7 @@ export function EarnTab() {
     if (createAffiliate.isPending) return;
 
     setHasTriedCreate(true);
-    createAffiliate.mutateAsync().catch(() => {
+    createAffiliate.mutate().catch(() => {
       toast.error('Failed to join affiliate program');
     });
   }, [isAuthenticated, authUserId, hasAffiliate, hasTriedCreate, isAuthLoading, createAffiliate]);

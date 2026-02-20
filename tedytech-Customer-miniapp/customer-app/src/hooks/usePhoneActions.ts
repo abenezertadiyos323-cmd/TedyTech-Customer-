@@ -19,7 +19,7 @@ export function useCreatePhoneAction(sessionId: string | null) {
       if (!sessionId) throw new Error("No session");
 
       try {
-        const id = await mutation.mutate({
+        const id = await mutation({
           sessionId,
           phoneId,
           variantId: variantId ?? null,
@@ -62,7 +62,7 @@ export function useCreateExchangeRequest(sessionId: string | null) {
       if (!sessionId) throw new Error("No session");
 
       try {
-        const id = await mutation.mutate({
+        const id = await mutation({
           sessionId,
           desiredPhoneId: params.desiredPhoneId,
           offeredModel: params.offeredModel,

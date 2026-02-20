@@ -65,7 +65,7 @@ export function ExchangeTab() {
     if (!canSubmit || !sessionId) return;
 
     try {
-      await createExchange.mutateAsync({
+      await createExchange.mutate({
         desiredPhoneId: selectedPhoneId,
         offeredModel: yourModel.trim(),
         offeredStorageGb: yourStorage!,

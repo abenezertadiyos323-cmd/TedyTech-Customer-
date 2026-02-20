@@ -95,7 +95,7 @@ export function useCreateAffiliate() {
       if (!authUserId)
         throw new Error("Must be authenticated to create affiliate");
       try {
-        await mutation.mutate({ customerId: authUserId });
+        await mutation({ customerId: authUserId });
         return true;
       } catch (e) {
         console.error("[Affiliate] Error creating:", e);
