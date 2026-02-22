@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { useAffiliateContext, useCreateAffiliate } from '@/hooks/useAffiliate';
 import { useApp } from '@/contexts/AppContext';
 import { toast } from 'sonner';
-
+import { storeConfig } from '@/config/storeConfig';
 
 // ---------------------------------------------------------------------------
 // Local error boundary — catches render errors inside EarnTab only.
@@ -101,7 +101,7 @@ function EarnTabInner() {
 
   const referralCode = stats.referralCode ?? '';
   const referralLink = stats.referralCode
-    ? `${window.location.origin}/?ref=${stats.referralCode}`
+    ? `https://t.me/${storeConfig.botUsername}?start=ref_${stats.referralCode}`
     : '';
   const shareMessage = referralLink
     ? `Get your next phone from TedyTech! Use my referral code ${referralCode}: ${referralLink}`
