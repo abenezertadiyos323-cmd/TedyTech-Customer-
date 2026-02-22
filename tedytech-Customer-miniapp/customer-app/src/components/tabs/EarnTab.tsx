@@ -6,6 +6,7 @@ import { useAffiliateContext, useCreateAffiliate } from '@/hooks/useAffiliate';
 import { useApp } from '@/contexts/AppContext';
 import { toast } from 'sonner';
 import { ReferralDebugPanel } from '@/components/ReferralDebugPanel';
+import { storeConfig } from '@/config/storeConfig';
 
 
 // ---------------------------------------------------------------------------
@@ -102,7 +103,7 @@ function EarnTabInner() {
 
   const referralCode = stats.referralCode ?? '';
   const referralLink = stats.referralCode
-    ? `https://t.me/Tedytech_bot?start=ref_${stats.referralCode}`
+    ? `https://t.me/${storeConfig.botUsername}?startapp=ref_${stats.referralCode}`
     : '';
   const shareMessage = referralLink
     ? `Get your next phone from TedyTech! Use my referral code ${referralCode}: ${referralLink}`
