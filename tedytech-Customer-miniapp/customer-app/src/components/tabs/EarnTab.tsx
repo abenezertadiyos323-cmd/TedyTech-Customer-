@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, Share2, DollarSign, Clock, CheckCircle, Users, AlertCircle } from 'lucide-react';
+import { Copy, Share2, DollarSign, Clock, CheckCircle, Users, AlertCircle, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAffiliateContext, useCreateAffiliate } from '@/hooks/useAffiliate';
 import { useApp } from '@/contexts/AppContext';
 import { toast } from 'sonner';
+
 
 // ---------------------------------------------------------------------------
 // Local error boundary — catches render errors inside EarnTab only.
@@ -100,38 +101,41 @@ function EarnTabInner() {
 
   const referralCode = stats.referralCode ?? '';
   const referralLink = stats.referralCode
-    ? `https://tedytech.com/ref/${stats.referralCode}`
+    ? `${window.location.origin}/?ref=${stats.referralCode}`
+    : '';
+  const shareMessage = referralLink
+    ? `Get your next phone from TedyTech! Use my referral code ${referralCode}: ${referralLink}`
     : '';
 
   const handleCopyCode = () => {
     if (stats.referralCode) {
-      navigator.clipboard.writeText(stats.referralCode);
-      toast.success('Referral code copied!');
+      navigator.clipboard.writeText(stats.referralCode).catch(() => {});
+      toast.success('Copied!');
     }
   };
 
   const handleCopyLink = () => {
-    if (stats.referralCode) {
-      navigator.clipboard.writeText(referralLink);
-      toast.success('Referral link copied!');
+    if (referralLink) {
+      navigator.clipboard.writeText(referralLink).catch(() => {});
+      toast.success('Link copied!');
     }
   };
 
-  const handleShare = async () => {
-    if (!stats.referralCode) return;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Join TEDYTECH',
-          text: `Use my referral code ${stats.referralCode} to get great deals on phones at TEDYTECH!`,
-          url: referralLink,
-        });
-      } catch {
-        handleCopyLink();
-      }
+  const handleShareTelegram = () => {
+    if (!referralLink) return;
+    const tg = (window as { Telegram?: { WebApp?: { openLink?: (url: string) => void } } })
+      .Telegram?.WebApp;
+    const url = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(`Get your next phone from TedyTech! Use my referral code ${referralCode}`)}`;
+    if (tg?.openLink) {
+      tg.openLink(url);
     } else {
-      handleCopyLink();
+      window.open(url, '_blank');
     }
+  };
+
+  const handleShareWhatsApp = () => {
+    if (!shareMessage) return;
+    window.open(`https://wa.me/?text=${encodeURIComponent(shareMessage)}`, '_blank');
   };
 
   // Always render the full dashboard immediately.
@@ -248,14 +252,25 @@ function EarnTabInner() {
               <Copy className="w-4 h-4" />
             </Button>
           </div>
-          <Button
-            className="w-full gap-2"
-            onClick={handleShare}
-            disabled={!stats.referralCode}
-          >
-            <Share2 className="w-4 h-4" />
-            Share Link
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              className="flex-1 gap-2"
+              onClick={handleShareTelegram}
+              disabled={!stats.referralCode}
+            >
+              <Share2 className="w-4 h-4" />
+              Telegram
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1 gap-2"
+              onClick={handleShareWhatsApp}
+              disabled={!stats.referralCode}
+            >
+              <MessageSquare className="w-4 h-4" />
+              WhatsApp
+            </Button>
+          </div>
         </Card>
 
         {/* How It Works */}

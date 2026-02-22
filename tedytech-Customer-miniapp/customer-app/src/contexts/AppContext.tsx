@@ -18,6 +18,7 @@ import {
   useRemoveFavorite,
 } from "@/hooks/useFavorites";
 import type { Phone, SortOption } from "@/types/phone";
+import { storeConfig } from "@/config/storeConfig";
 
 // Local Telegram WebApp type — self-contained so this file compiles
 // regardless of which tsconfig the IDE picks up.
@@ -80,8 +81,10 @@ function debugLog(msg: string, data?: Record<string, unknown>) {
 
 type TelegramCheckState = "checking" | "in_telegram" | "needs_telegram";
 
-const TELEGRAM_STARTAPP_URL = "https://t.me/<BOT_USERNAME>?startapp=home";
+const TELEGRAM_STARTAPP_URL = `https://t.me/${storeConfig.botUsername}?startapp=home`;
 const TG_USER_STORAGE_KEY = "tg_user_id";
+// Stores the ?ref= referral code from the URL across the session until auth resolves.
+const REF_STORAGE_KEY = "tedytech_ref";
 
 export interface TelegramUser {
   id: number;
@@ -258,6 +261,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Hook must be called unconditionally (Rules of Hooks).
   // The actual call happens in a useEffect after Telegram is detected.
   const verifyTelegramUserMutation = useMutation(api.auth.verifyTelegramUser);
+  const createReferralMutation = useMutation(api.affiliates.createReferralIfValid);
   // Verified Convex customer document ID — null until background verification
   // completes successfully. Never blocks UI rendering.
   const [verifiedCustomerId, setVerifiedCustomerId] = useState<string | null>(
@@ -273,7 +277,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const removeFavorite = useRemoveFavorite(sessionId);
 
   const favoritePhoneIds = useMemo(
-    () => favorites.map((f: { phone_id: string }) => f.phone_id),
+    () => favorites.map((f: { phoneId: string }) => f.phoneId),
     [favorites],
   );
 
@@ -390,6 +394,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // ── Capture ?ref= referral code from URL on first mount ──────────────────
+  // Runs before Telegram detection so the code is saved even during loading.
+  // Uses window.location.search (before the hash) — unaffected by HashRouter.
+  useEffect(() => {
+    const ref = new URLSearchParams(
+      typeof window !== "undefined" ? window.location.search : "",
+    ).get("ref");
+    if (ref && ref.trim()) {
+      try {
+        localStorage.setItem(REF_STORAGE_KEY, ref.trim());
+        debugLog("referral code captured from URL", { ref: ref.trim() });
+      } catch {
+        // Blocked in some private-browsing contexts — safe to ignore
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Telegram MainButton: default close action ────────────────────────────
   const closeWebApp = useCallback(() => {
     try {
@@ -418,6 +439,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const id = String(result.customerId);
         setVerifiedCustomerId(id);
         debugLog("background verify: complete", { customerId: id });
+
+        // Apply any referral code captured from the ?ref= URL param.
+        // createReferralIfValid has server-side guards (duplicate, self-referral).
+        let refCode: string | null = null;
+        try {
+          refCode = localStorage.getItem(REF_STORAGE_KEY);
+        } catch { /* ignore */ }
+        const tgUser = getTelegramUser();
+        if (refCode && tgUser?.id) {
+          debugLog("applying referral", { refCode, referredId: tgUser.id });
+          createReferralMutation({
+            referralCode: refCode,
+            referredTelegramId: tgUser.id,
+          })
+            .catch(() => { /* non-fatal — server guards prevent double-apply */ })
+            .finally(() => {
+              // Clear after attempt regardless of result.
+              // Server is idempotent — safe to clear here.
+              try { localStorage.removeItem(REF_STORAGE_KEY); } catch { /* */ }
+            });
+        }
       })
       .catch((err: unknown) => {
         // Non-fatal: initData may be expired or TELEGRAM_BOT_TOKEN not set yet.
@@ -425,7 +467,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const msg = err instanceof Error ? err.message : String(err);
         console.warn("[TedyTech] Background Telegram verification failed:", msg);
       });
-  }, [checkState, verifyTelegramUserMutation]);
+  }, [checkState, verifyTelegramUserMutation, createReferralMutation]);
 
   // ── Favorites helpers ────────────────────────────────────────────────────
   const toggleSaved = useCallback(
