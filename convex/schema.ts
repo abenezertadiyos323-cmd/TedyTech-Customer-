@@ -56,14 +56,33 @@ export default defineSchema({
     photoUrl: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
+    // Referral fields
+    referralCode: v.optional(v.string()),
+    referredByTelegramId: v.optional(v.number()),
+    earningsTotal: v.optional(v.number()),
   }).index("by_telegramUserId", ["telegramUserId"]),
 
-  // Phone action requests (reserve / ask)
+  // Phone lead action requests from the customer mini app.
   phoneActions: defineTable({
     sessionId: v.string(),
-    phoneId: v.string(),
+    actionType: v.union(
+      v.literal("inquiry"),
+      v.literal("exchange"),
+      v.literal("call"),
+      v.literal("map"),
+    ),
+    sourceTab: v.union(
+      v.literal("home"),
+      v.literal("search"),
+      v.literal("saved"),
+      v.literal("product_detail"),
+      v.literal("about"),
+    ),
+    sourceProductId: v.optional(v.string()),
+    timestamp: v.number(),
+    // Legacy fields kept optional for compatibility with historical rows.
+    phoneId: v.optional(v.string()),
     variantId: v.optional(v.string()),
-    actionType: v.string(),
     createdAt: v.number(),
   }).index("by_sessionId", ["sessionId"]),
 
@@ -157,12 +176,27 @@ export default defineSchema({
     .index("by_sellerId", ["sellerId"])
     .index("by_sellerId_createdAt", ["sellerId", "createdAt"]),
 
+  // Referral tracking by Telegram ID (created when a referred user opens the bot)
+  referrals: defineTable({
+    referrerTelegramId: v.number(),
+    referredTelegramId: v.number(),
+    referralCode: v.string(),
+    createdAt: v.number(),
+    status: v.union(v.literal("pending"), v.literal("paid")),
+    commissionAmount: v.number(),
+    purchaseOrderId: v.optional(v.string()),
+  })
+    .index("by_referredTelegramId", ["referredTelegramId"])
+    .index("by_referrerTelegramId", ["referrerTelegramId"]),
+
   // Affiliates and commissions
   affiliates: defineTable({
     customerId: v.string(),
     referralCode: v.string(),
     createdAt: v.number(),
-  }).index("by_customerId", ["customerId"]),
+  })
+    .index("by_customerId", ["customerId"])
+    .index("by_referralCode", ["referralCode"]),
 
   affiliateCommissions: defineTable({
     affiliateId: v.string(),

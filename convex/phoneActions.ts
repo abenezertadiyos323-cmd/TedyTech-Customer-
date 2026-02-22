@@ -5,16 +5,35 @@ import { requireAdmin } from "./lib/auth/adminAuth";
 export const createPhoneActionRequest = mutation({
   args: {
     sessionId: v.string(),
-    phoneId: v.string(),
+    actionType: v.union(
+      v.literal("inquiry"),
+      v.literal("exchange"),
+      v.literal("call"),
+      v.literal("map"),
+    ),
+    sourceTab: v.union(
+      v.literal("home"),
+      v.literal("search"),
+      v.literal("saved"),
+      v.literal("product_detail"),
+      v.literal("about"),
+    ),
+    sourceProductId: v.optional(v.string()),
+    timestamp: v.optional(v.number()),
+    // Legacy fields kept optional for backward compatibility.
+    phoneId: v.optional(v.string()),
     variantId: v.optional(v.string()),
-    actionType: v.string(),
   },
   handler: async (ctx, args) => {
+    const sourceProductId = args.sourceProductId ?? args.phoneId;
     const id = await ctx.db.insert("phoneActions", {
       sessionId: args.sessionId,
-      phoneId: args.phoneId,
-      variantId: args.variantId ?? null,
       actionType: args.actionType,
+      sourceTab: args.sourceTab,
+      sourceProductId: sourceProductId ?? undefined,
+      timestamp: args.timestamp ?? Date.now(),
+      phoneId: args.phoneId ?? sourceProductId ?? undefined,
+      variantId: args.variantId ?? undefined,
       createdAt: Date.now(),
     });
     return id;
@@ -69,13 +88,14 @@ export const listAllPhoneActions = query({
         let phoneName: string | null = null;
         let phonePrice: number | null = null;
         try {
-          const product = await ctx.db.get(a.phoneId as any);
+          const productId = (a.sourceProductId ?? a.phoneId) as any;
+          const product = productId ? await ctx.db.get(productId) : null;
           if (product) {
             phoneName = (product as any).name ?? null;
             phonePrice = (product as any).price ?? null;
           }
         } catch {
-          // phoneId may not be a valid product ID
+          // sourceProductId/phoneId may not be a valid product ID
         }
         return { ...a, phoneName, phonePrice };
       }),

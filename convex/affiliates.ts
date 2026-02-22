@@ -143,6 +143,9 @@ export const createReferralIfValid = mutation({
 export const getUserReferralStats = query({
   args: { telegramId: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    // Smoke-check: always return safe defaults rather than throw.
+    // Telegram mini apps crash the entire app on uncaught Convex query errors,
+    // so this function must never propagate an exception to the client.
     const SAFE_DEFAULTS = {
       referralCode: null as string | null,
       totalReferredCount: 0,
@@ -160,7 +163,12 @@ export const getUserReferralStats = query({
     };
 
     const telegramId = args.telegramId;
-    if (typeof telegramId !== "number" || !Number.isFinite(telegramId)) {
+    // Guard: telegramId must be a positive finite integer (real Telegram IDs ≥ 1).
+    if (
+      typeof telegramId !== "number" ||
+      !Number.isFinite(telegramId) ||
+      telegramId <= 0
+    ) {
       return SAFE_DEFAULTS;
     }
 
@@ -211,7 +219,9 @@ export const getUserReferralStats = query({
       };
     } catch (error) {
       // Non-fatal: this query should never break Earn tab rendering.
-      console.warn("[affiliates.getUserReferralStats] returning defaults", {
+      // Using console.error so the exception is visible in Convex production logs
+      // without crashing the Telegram mini app for the user.
+      console.error("[affiliates.getUserReferralStats] unexpected error — returning safe defaults", {
         telegramId,
         error: error instanceof Error ? error.message : String(error),
       });
