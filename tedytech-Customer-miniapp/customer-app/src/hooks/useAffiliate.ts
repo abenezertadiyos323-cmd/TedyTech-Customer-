@@ -84,9 +84,16 @@ export function useAffiliate() {
   const totalReferredCount = safeNum(
     referralStatsData?.totalReferredCount ?? referralStatsData?.referralCount,
   );
+  const resolvedReferralCode = [
+    referralStatsData?.referralCode,
+    affiliate?.referralCode,
+  ].find(
+    (code): code is string =>
+      typeof code === "string" && code.trim().length > 0,
+  ) ?? null;
 
   const stats: AffiliateStats = {
-    referralCode: referralStatsData?.referralCode ?? affiliate?.referralCode ?? null,
+    referralCode: resolvedReferralCode,
     commissionPercent: 5,
     totalEarnings: commissionTotal + referralTotal,
     pendingEarnings: commissionPending + referralPending,

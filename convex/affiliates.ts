@@ -141,49 +141,82 @@ export const createReferralIfValid = mutation({
 // ── PART 5: earnings stats ───────────────────────────────────────────────────
 
 export const getUserReferralStats = query({
-  args: { telegramId: v.number() },
+  args: { telegramId: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const customer = await ctx.db
-      .query("customers")
-      .withIndex("by_telegramUserId", (q) =>
-        q.eq("telegramUserId", args.telegramId),
-      )
-      .first();
-
-    const affiliate = customer
-      ? await ctx.db
-          .query("affiliates")
-          .withIndex("by_customerId", (q) => q.eq("customerId", customer._id))
-          .first()
-      : null;
-
-    const referrals = await ctx.db
-      .query("referrals")
-      .withIndex("by_referrerTelegramId", (q) =>
-        q.eq("referrerTelegramId", args.telegramId),
-      )
-      .order("desc")
-      .collect();
-
-    const paid = referrals.filter((r) => r.status === "paid");
-    const pending = referrals.filter((r) => r.status === "pending");
-    const totalReferredCount = referrals.length;
-
-    return {
-      referralCode: affiliate?.referralCode ?? null,
-      totalReferredCount,
+    const SAFE_DEFAULTS = {
+      referralCode: null as string | null,
+      totalReferredCount: 0,
       // Kept for backward compatibility with older clients.
-      referralCount: totalReferredCount,
-      totalEarned: paid.reduce((s, r) => s + r.commissionAmount, 0),
-      paidAmount: paid.reduce((s, r) => s + r.commissionAmount, 0),
-      pendingAmount: pending.reduce((s, r) => s + r.commissionAmount, 0),
-      recentReferrals: referrals.slice(0, 5).map((r) => ({
-        referredTelegramId: r.referredTelegramId,
-        status: r.status,
-        createdAt: r.createdAt,
-        commissionAmount: r.commissionAmount,
-      })),
+      referralCount: 0,
+      totalEarned: 0,
+      paidAmount: 0,
+      pendingAmount: 0,
+      recentReferrals: [] as Array<{
+        referredTelegramId: number;
+        status: "pending" | "paid";
+        createdAt: number;
+        commissionAmount: number;
+      }>,
     };
+
+    const telegramId = args.telegramId;
+    if (typeof telegramId !== "number" || !Number.isFinite(telegramId)) {
+      return SAFE_DEFAULTS;
+    }
+
+    try {
+      const customer = await ctx.db
+        .query("customers")
+        .withIndex("by_telegramUserId", (q) =>
+          q.eq("telegramUserId", telegramId),
+        )
+        .first();
+      if (!customer) return SAFE_DEFAULTS;
+
+      const affiliate = await ctx.db
+        .query("affiliates")
+        .withIndex("by_customerId", (q) => q.eq("customerId", customer._id))
+        .first();
+      const referralCode =
+        typeof affiliate?.referralCode === "string"
+          ? affiliate.referralCode.trim()
+          : "";
+      if (!referralCode) return SAFE_DEFAULTS;
+
+      const referrals = await ctx.db
+        .query("referrals")
+        .withIndex("by_referrerTelegramId", (q) =>
+          q.eq("referrerTelegramId", telegramId),
+        )
+        .order("desc")
+        .collect();
+
+      const paid = referrals.filter((r) => r.status === "paid");
+      const pending = referrals.filter((r) => r.status === "pending");
+      const totalReferredCount = Array.isArray(referrals) ? referrals.length : 0;
+
+      return {
+        referralCode,
+        totalReferredCount,
+        referralCount: totalReferredCount,
+        totalEarned: paid.reduce((s, r) => s + r.commissionAmount, 0),
+        paidAmount: paid.reduce((s, r) => s + r.commissionAmount, 0),
+        pendingAmount: pending.reduce((s, r) => s + r.commissionAmount, 0),
+        recentReferrals: referrals.slice(0, 5).map((r) => ({
+          referredTelegramId: r.referredTelegramId,
+          status: r.status,
+          createdAt: r.createdAt,
+          commissionAmount: r.commissionAmount,
+        })),
+      };
+    } catch (error) {
+      // Non-fatal: this query should never break Earn tab rendering.
+      console.warn("[affiliates.getUserReferralStats] returning defaults", {
+        telegramId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return SAFE_DEFAULTS;
+    }
   },
 });
 
