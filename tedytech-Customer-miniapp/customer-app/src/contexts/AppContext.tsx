@@ -19,6 +19,7 @@ import {
 } from "@/hooks/useFavorites";
 import type { Phone, SortOption } from "@/types/phone";
 import { storeConfig } from "@/config/storeConfig";
+import { toast } from "sonner";
 
 // Local Telegram WebApp type — self-contained so this file compiles
 // regardless of which tsconfig the IDE picks up.
@@ -97,6 +98,8 @@ const TG_USER_STORAGE_KEY = "tg_user_id";
 const REF_STORAGE_KEY = "tedytech_ref";
 // localStorage key for referral-flow debug snapshot (always written, read by ReferralDebugPanel).
 const REF_DEBUG_KEY = "TEDY_REF_DEBUG_LAST";
+// Developer Telegram ID — auto-toasts visible only to this account, no flag needed.
+const DEV_TG_ID = 8319120114;
 
 export interface TelegramUser {
   id: number;
@@ -491,6 +494,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }));
         } catch { /* ignore */ }
 
+        // Dev-only: show capture result immediately (no flag needed, only for DEV_TG_ID).
+        if (tgUser?.id === DEV_TG_ID) {
+          toast.info(
+            _dbgMutationTriggered
+              ? `Ref captured: ${_dbgRefSource} | code: ${refCode}`
+              : `Ref: no code found (source: ${_dbgRefSource})`,
+            { duration: 7000 },
+          );
+        }
+
         if (_dbgMutationTriggered) {
           console.log("[TedyTech] applying referral", { refCode, referredId: tgUser!.id });
           createReferralMutation({
@@ -502,14 +515,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 const prev = JSON.parse(localStorage.getItem(REF_DEBUG_KEY) ?? "{}") as Record<string, unknown>;
                 localStorage.setItem(REF_DEBUG_KEY, JSON.stringify({ ...prev, referralMutationResult: "success", referralMutationError: "" }));
               } catch { /* ignore */ }
+              if (tgUser?.id === DEV_TG_ID) {
+                toast.success(`Mutation: success | code: ${refCode}`, { duration: 9000 });
+              }
             })
             .catch((err: unknown) => {
               /* non-fatal — server guards prevent double-apply */
+              const errMsg = err instanceof Error ? err.message : String(err);
               try {
                 const prev = JSON.parse(localStorage.getItem(REF_DEBUG_KEY) ?? "{}") as Record<string, unknown>;
-                const msg = err instanceof Error ? err.message : String(err);
-                localStorage.setItem(REF_DEBUG_KEY, JSON.stringify({ ...prev, referralMutationResult: "error", referralMutationError: msg.slice(0, 120) }));
+                localStorage.setItem(REF_DEBUG_KEY, JSON.stringify({ ...prev, referralMutationResult: "error", referralMutationError: errMsg.slice(0, 120) }));
               } catch { /* ignore */ }
+              if (tgUser?.id === DEV_TG_ID) {
+                toast.error(`Mutation: error | ${errMsg.slice(0, 80)}`, { duration: 12000 });
+              }
             })
             .finally(() => {
               // Clear after attempt regardless of result.

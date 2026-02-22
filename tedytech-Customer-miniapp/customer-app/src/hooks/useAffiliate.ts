@@ -2,9 +2,10 @@ import {
   useQuery as useConvexQuery,
   useMutation as useConvexMutation,
 } from "convex/react";
-import { useState, createContext, useContext, useEffect } from "react";
+import { useState, createContext, useContext, useEffect, useRef } from "react";
 import { api } from "@/convex_generated/api";
 import { useApp } from "@/contexts/AppContext";
+import { toast } from "sonner";
 
 // Debug: active when ?debug=1 or localStorage TEDY_DEBUG=1.
 const _IS_DEBUG: boolean = (() => {
@@ -16,6 +17,8 @@ const _IS_DEBUG: boolean = (() => {
   return false;
 })();
 const STATS_DEBUG_KEY = "TEDY_STATS_DEBUG_LAST";
+// Developer Telegram ID — auto-toasts visible only to this account.
+const DEV_TG_ID = 8319120114;
 
 // ---------------------------------------------------------------------------
 // Runtime shape of affiliateCommissions rows from Convex.
@@ -47,6 +50,7 @@ interface AffiliateStats {
  */
 export function useAffiliate() {
   const { verifiedCustomerId, telegramUser, isAuthLoading } = useApp();
+  const shownStatsToastRef = useRef(false);
   const initData =
     (
       window as { Telegram?: { WebApp?: { initData?: string } } }
@@ -124,17 +128,31 @@ export function useAffiliate() {
     (customerId !== null && affiliateData === undefined) ||
     (affiliate !== null && commissionsData === undefined);
 
-  // When debug is enabled, persist latest stats snapshot to localStorage for ReferralDebugPanel.
+  // Persist stats snapshot for debug panel + show dev-only toast when stats first load.
   useEffect(() => {
-    if (!_IS_DEBUG) return;
-    try {
-      localStorage.setItem(STATS_DEBUG_KEY, JSON.stringify({
-        stats,
-        statsLoaded: !isLoading,
-        statsError: null,
-        timestampISO: new Date().toISOString(),
-      }));
-    } catch { /* ignore */ }
+    // Dev-only: show once when referralStatsData first arrives for DEV_TG_ID.
+    if (
+      telegramId === DEV_TG_ID &&
+      referralStatsData !== undefined &&
+      !shownStatsToastRef.current
+    ) {
+      shownStatsToastRef.current = true;
+      const count = safeNum(
+        referralStatsData?.totalReferredCount ?? referralStatsData?.referralCount,
+      );
+      toast.info(`Referral stats: referralCount=${count}`, { duration: 9000 });
+    }
+    // Debug localStorage snapshot (only when debug mode is active).
+    if (_IS_DEBUG) {
+      try {
+        localStorage.setItem(STATS_DEBUG_KEY, JSON.stringify({
+          stats,
+          statsLoaded: !isLoading,
+          statsError: null,
+          timestampISO: new Date().toISOString(),
+        }));
+      } catch { /* ignore */ }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [referralStatsData, affiliateData, isLoading]);
 
