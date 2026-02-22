@@ -112,13 +112,19 @@ export const createReferralIfValid = mutation({
       .first();
     if (existing) return false;
 
-    await ctx.db.insert("referrals", {
+    const referralId = await ctx.db.insert("referrals", {
       referrerTelegramId,
       referredTelegramId,
       referralCode,
       createdAt: Date.now(),
       status: "pending",
       commissionAmount: 0,
+    });
+    console.log("[affiliates] referral created", {
+      _id: referralId,
+      referrerTelegramId,
+      referredTelegramId,
+      referralCode,
     });
 
     // Mark referred customer as referred (if their customer record already exists)
@@ -198,6 +204,11 @@ export const getUserReferralStats = query({
         )
         .order("desc")
         .collect();
+
+      console.log("[affiliates] getUserReferralStats", {
+        telegramId,
+        referralCount: referrals.length,
+      });
 
       const paid = referrals.filter((r) => r.status === "paid");
       const pending = referrals.filter((r) => r.status === "pending");

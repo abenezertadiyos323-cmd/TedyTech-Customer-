@@ -46,6 +46,8 @@ type TgWebApp = {
       username?: string;
       language_code?: string;
     };
+    // Set by Telegram when app is opened via t.me/bot?startapp=<value> or inline button
+    start_param?: string;
   };
   themeParams?: TgThemeParams;
   ready?: () => void;
@@ -440,15 +442,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setVerifiedCustomerId(id);
         debugLog("background verify: complete", { customerId: id });
 
-        // Apply any referral code captured from the ?ref= URL param.
+        // Apply any referral code: first from ?ref= URL param (captured on mount),
+        // then fall back to Telegram start_param (app opened via startapp=ref_CODE).
         // createReferralIfValid has server-side guards (duplicate, self-referral).
         let refCode: string | null = null;
         try {
           refCode = localStorage.getItem(REF_STORAGE_KEY);
         } catch { /* ignore */ }
+
+        // Fallback: read Telegram's start_param (set when opened via startapp=ref_CODE)
+        if (!refCode) {
+          try {
+            const startParam = getTgWebApp()?.initDataUnsafe?.start_param;
+            if (typeof startParam === "string" && startParam.startsWith("ref_")) {
+              refCode = startParam.slice(4); // strip leading 'ref_'
+              console.log("[TedyTech] referral code from start_param", { code: refCode });
+            }
+          } catch { /* ignore */ }
+        }
+
         const tgUser = getTelegramUser();
         if (refCode && tgUser?.id) {
-          debugLog("applying referral", { refCode, referredId: tgUser.id });
+          console.log("[TedyTech] applying referral", { refCode, referredId: tgUser.id });
           createReferralMutation({
             referralCode: refCode,
             referredTelegramId: tgUser.id,
