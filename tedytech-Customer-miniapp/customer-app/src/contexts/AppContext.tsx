@@ -399,25 +399,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  useEffect(() => {
-    if (checkState !== "in_telegram") return;
-    const tg = getTgWebApp();
-    const main = tg?.MainButton;
-    if (!tg || !main) return;
-    try {
-      main.setText?.("Close");
-      const handler = () => closeWebApp();
-      main.onClick?.(handler);
-      main.show?.();
-      return () => {
-        main.offClick?.(handler);
-        main.hide?.();
-      };
-    } catch (err) {
-      console.warn("[TelegramDetect] MainButton error:", err);
-    }
-  }, [checkState, closeWebApp]);
-
   // ── Background Telegram verification ─────────────────────────────────────
   // Fires once after Telegram is detected. Never blocks UI — on any failure
   // we log a warning and carry on; verifiedCustomerId simply stays null.
