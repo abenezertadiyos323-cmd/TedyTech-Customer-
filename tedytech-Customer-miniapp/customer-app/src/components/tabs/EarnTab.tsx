@@ -121,17 +121,17 @@ function EarnTabInner() {
     }
   };
 
-  const handleShare = async () => {
+  const handleShare = () => {
     if (!referralLink) return;
-    if (navigator.share) {
-      try {
-        await navigator.share({ text: shareMessage, url: referralLink });
-      } catch {
-        // User dismissed the share sheet — no feedback needed
-      }
+    const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareMessage)}`;
+    const tg = (window as { Telegram?: { WebApp?: { openTelegramLink?: (url: string) => void; openLink?: (url: string) => void } } })
+      .Telegram?.WebApp;
+    if (tg?.openTelegramLink) {
+      tg.openTelegramLink(tgShareUrl);
+    } else if (tg?.openLink) {
+      tg.openLink(tgShareUrl);
     } else {
-      navigator.clipboard.writeText(referralLink).catch(() => {});
-      toast.success('Link copied!');
+      window.open(tgShareUrl, '_blank');
     }
   };
 
