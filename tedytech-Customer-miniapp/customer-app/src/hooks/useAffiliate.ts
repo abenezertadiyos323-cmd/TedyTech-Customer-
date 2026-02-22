@@ -16,7 +16,7 @@ interface ConvexCommission {
   orderId?: string;
   orderAmount: number;
   commissionPercent: number;
-  commissionAmount: number; // camelCase — matches schema.ts
+  commissionAmount: number;
   status: string;
   createdAt: number;
 }
@@ -25,6 +25,7 @@ interface AffiliateStats {
   totalEarnings: number;
   pendingEarnings: number;
   paidEarnings: number;
+  totalReferredCount: number;
   successfulReferrals: number;
   commissionPercent: number;
   referralCode: string | null;
@@ -42,6 +43,7 @@ export function useAffiliate() {
   const hasTelegramEvidence = initData.trim().length > 0 || Boolean(telegramUser);
   const customerId =
     verifiedCustomerId && hasTelegramEvidence ? verifiedCustomerId : null;
+  const telegramId = telegramUser?.id ?? null;
 
   const affiliateData = useConvexQuery(
     api.affiliates.getAffiliateByCustomerId,
@@ -53,32 +55,46 @@ export function useAffiliate() {
     api.affiliates.listAffiliateCommissions,
     affiliate?._id ? { affiliateId: affiliate._id } : "skip",
   );
-  // Cast to the runtime camelCase shape that Convex actually returns.
   const commissions = (commissionsData ?? []) as ConvexCommission[];
+
+  // ── New: referral-table stats (populated by Telegram bot tracking) ────────
+  const referralStatsData = useConvexQuery(
+    api.affiliates.getUserReferralStats,
+    telegramId ? { telegramId } : "skip",
+  );
 
   const safeNum = (v: unknown): number =>
     typeof v === "number" && isFinite(v) ? v : 0;
 
+  // Merge commissions (legacy manual entries) with referrals table stats.
+  // Referrals-table values take precedence when non-zero.
+  const commissionTotal = commissions.reduce(
+    (sum, c) => sum + safeNum(c.commissionAmount),
+    0,
+  );
+  const commissionPending = commissions
+    .filter((c) => c.status === "pending")
+    .reduce((sum, c) => sum + safeNum(c.commissionAmount), 0);
+  const commissionPaid = commissions
+    .filter((c) => c.status === "paid")
+    .reduce((sum, c) => sum + safeNum(c.commissionAmount), 0);
+  const referralTotal = safeNum(referralStatsData?.totalEarned);
+  const referralPending = safeNum(referralStatsData?.pendingAmount);
+  const referralPaid = safeNum(referralStatsData?.paidAmount);
+  const totalReferredCount = safeNum(
+    referralStatsData?.totalReferredCount ?? referralStatsData?.referralCount,
+  );
+
   const stats: AffiliateStats = {
-    referralCode: affiliate?.referralCode ?? null,
+    referralCode: referralStatsData?.referralCode ?? affiliate?.referralCode ?? null,
     commissionPercent: 5,
-    totalEarnings: commissions.reduce(
-      (sum, c) => sum + safeNum(c.commissionAmount),
-      0,
-    ),
-    pendingEarnings: commissions
-      .filter((c) => c.status === "pending")
-      .reduce((sum, c) => sum + safeNum(c.commissionAmount), 0),
-    paidEarnings: commissions
-      .filter((c) => c.status === "paid")
-      .reduce((sum, c) => sum + safeNum(c.commissionAmount), 0),
-    successfulReferrals: commissions.filter((c) => c.status !== "cancelled")
-      .length,
+    totalEarnings: commissionTotal + referralTotal,
+    pendingEarnings: commissionPending + referralPending,
+    paidEarnings: commissionPaid + referralPaid,
+    totalReferredCount,
+    successfulReferrals: totalReferredCount,
   };
 
-  // isLoading is true only while queries are genuinely in-flight.
-  // commissionsData is "skip"/undefined when affiliate is null — that is NOT
-  // loading, so we must not gate on it when affiliate is null.
   const isLoading =
     isAuthLoading ||
     (customerId !== null && affiliateData === undefined) ||
@@ -97,7 +113,7 @@ export function useAffiliate() {
 
 /**
  * Hook to create an affiliate record for the authenticated user.
- * Tracks isPending so callers can gate loading UI correctly.
+ * Passes firstName so the generated code uses the user's name.
  */
 export function useCreateAffiliate() {
   const { verifiedCustomerId, telegramUser } = useApp();
@@ -116,7 +132,11 @@ export function useCreateAffiliate() {
         throw new Error("Must be authenticated to create affiliate");
       setIsPending(true);
       try {
-        await mutation({ customerId: verifiedCustomerId });
+        await mutation({
+          customerId: verifiedCustomerId,
+          firstName: telegramUser?.first_name,
+          telegramId: telegramUser?.id,
+        });
         return true;
       } catch (e) {
         console.error("[Affiliate] Error creating:", e);
@@ -135,10 +155,6 @@ export function useCreateAffiliate() {
 
 export type AffiliateState = ReturnType<typeof useAffiliate>;
 
-// Static safe fallback: if EarnTab is ever rendered outside the provider
-// (tests, future pages) it receives zero-state data instead of crashing.
-// isLoading:true means EarnTab shows '—' placeholders — same as real
-// first-render before Convex resolves.
 const _affiliateFallback: AffiliateState = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   affiliate: null as any,
@@ -147,6 +163,7 @@ const _affiliateFallback: AffiliateState = {
     totalEarnings: 0,
     pendingEarnings: 0,
     paidEarnings: 0,
+    totalReferredCount: 0,
     successfulReferrals: 0,
     commissionPercent: 5,
     referralCode: null,

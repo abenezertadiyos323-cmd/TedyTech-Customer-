@@ -106,6 +106,9 @@ function EarnTabInner() {
   const shareMessage = referralLink
     ? `Get your next phone from TedyTech! Use my referral code ${referralCode}: ${referralLink}`
     : '';
+  const referredPeopleLabel = `${stats.totalReferredCount} ${
+    stats.totalReferredCount === 1 ? 'person' : 'people'
+  }`;
 
   const handleCopyCode = () => {
     if (stats.referralCode) {
@@ -160,6 +163,9 @@ function EarnTabInner() {
           <p className="text-sm text-muted-foreground">
             Get <span className="text-primary font-bold">{stats.commissionPercent}%</span> commission on every successful referral
           </p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Referred: <span className="text-foreground font-semibold">{referredPeopleLabel}</span>
+          </p>
         </div>
 
         {/* Stats Grid */}
@@ -207,7 +213,7 @@ function EarnTabInner() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Referrals</p>
-                <p className="text-lg font-bold text-foreground">{stats.successfulReferrals}</p>
+                <p className="text-lg font-bold text-foreground">{stats.totalReferredCount}</p>
               </div>
             </div>
           </Card>
