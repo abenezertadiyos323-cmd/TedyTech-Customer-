@@ -316,6 +316,8 @@ function EarnTabInner() {
           <p className="text-xs text-muted-foreground">
             💰 Paid manually by admin
           </p>
+          {/* DEBUG — remove after confirming new build loads in Telegram */}
+          <p className="text-xs text-muted-foreground/40 mt-1">Build: a2bb76c7</p>
         </div>
       </div>
     </div>
