@@ -144,6 +144,51 @@ export const createReferralIfValid = mutation({
   },
 });
 
+// ── getOrCreateMyAffiliate ────────────────────────────────────────────────────
+// Called by the customer mini app Earn page on load.
+// Uses telegramUserId directly — no verifiedCustomerId dependency.
+// Code format: "REF" + 6 random digits. Collision-safe (10-attempt guard).
+
+export const getOrCreateMyAffiliate = mutation({
+  args: { telegramUserId: v.string() },
+  handler: async (ctx, { telegramUserId }) => {
+    // 1. Return existing affiliate if present (fast path)
+    const existing = await ctx.db
+      .query("affiliates")
+      .withIndex("by_ownerTelegramUserId", (q) =>
+        q.eq("ownerTelegramUserId", telegramUserId)
+      )
+      .first();
+    if (existing) return existing;
+
+    // 2. Generate a unique REF+6digit code, collision-safe
+    let code: string;
+    let attempts = 0;
+    do {
+      if (++attempts > 10)
+        throw new Error(
+          "Failed to generate unique affiliate code after 10 attempts"
+        );
+      code = "REF" + Math.floor(100_000 + Math.random() * 900_000).toString();
+    } while (
+      await ctx.db
+        .query("affiliates")
+        .withIndex("by_referralCode", (q) => q.eq("referralCode", code))
+        .first()
+    );
+
+    // 3. Insert and return the new affiliate
+    const id = await ctx.db.insert("affiliates", {
+      customerId: telegramUserId,
+      ownerTelegramUserId: telegramUserId,
+      referralCode: code,
+      createdAt: Date.now(),
+    });
+
+    return (await ctx.db.get(id))!;
+  },
+});
+
 // ── PART 5: earnings stats ───────────────────────────────────────────────────
 
 export const getUserReferralStats = query({
@@ -191,10 +236,26 @@ export const getUserReferralStats = query({
         .query("affiliates")
         .withIndex("by_customerId", (q) => q.eq("customerId", customer._id))
         .first();
-      const referralCode =
+      let referralCode =
         typeof affiliate?.referralCode === "string"
           ? affiliate.referralCode.trim()
           : "";
+
+      // Fallback: affiliate may have been created via getOrCreateMyAffiliate
+      // (which stores ownerTelegramUserId rather than the Convex customer _id).
+      if (!referralCode) {
+        const tgAffiliate = await ctx.db
+          .query("affiliates")
+          .withIndex("by_ownerTelegramUserId", (q) =>
+            q.eq("ownerTelegramUserId", String(telegramId))
+          )
+          .first();
+        referralCode =
+          typeof tgAffiliate?.referralCode === "string"
+            ? tgAffiliate.referralCode.trim()
+            : "";
+      }
+
       if (!referralCode) return SAFE_DEFAULTS;
 
       const referrals = await ctx.db

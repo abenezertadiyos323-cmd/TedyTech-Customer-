@@ -168,31 +168,23 @@ export function useAffiliate() {
 }
 
 /**
- * Hook to create an affiliate record for the authenticated user.
- * Passes firstName so the generated code uses the user's name.
+ * Hook to get or create an affiliate record using telegramUserId directly.
+ * Does NOT require verifiedCustomerId — fires as soon as telegramUser is available.
+ * Replaces the old useCreateAffiliate which required customerId from background verification.
  */
 export function useCreateAffiliate() {
-  const { verifiedCustomerId, telegramUser } = useApp();
-  const mutation = useConvexMutation(api.affiliates.createAffiliateIfNotExists);
+  const { telegramUser } = useApp();
+  const mutation = useConvexMutation(api.affiliates.getOrCreateMyAffiliate);
   const [isPending, setIsPending] = useState(false);
-  const initData =
-    (
-      window as { Telegram?: { WebApp?: { initData?: string } } }
-    ).Telegram?.WebApp?.initData ?? "";
-  const hasTelegramEvidence = initData.trim().length > 0 || Boolean(telegramUser);
 
   return {
     isPending,
     mutate: async () => {
-      if (!verifiedCustomerId || !hasTelegramEvidence)
-        throw new Error("Must be authenticated to create affiliate");
+      if (!telegramUser?.id)
+        throw new Error("Telegram user not available");
       setIsPending(true);
       try {
-        await mutation({
-          customerId: verifiedCustomerId,
-          firstName: telegramUser?.first_name,
-          telegramId: telegramUser?.id,
-        });
+        await mutation({ telegramUserId: String(telegramUser.id) });
         return true;
       } catch (e) {
         console.error("[Affiliate] Error creating:", e);

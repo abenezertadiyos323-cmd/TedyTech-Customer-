@@ -194,9 +194,13 @@ export default defineSchema({
     customerId: v.string(),
     referralCode: v.string(),
     createdAt: v.number(),
+    // Telegram-first lookup: set when affiliate is created via getOrCreateMyAffiliate.
+    // optional so legacy rows (created via createAffiliateIfNotExists) remain valid.
+    ownerTelegramUserId: v.optional(v.string()),
   })
     .index("by_customerId", ["customerId"])
-    .index("by_referralCode", ["referralCode"]),
+    .index("by_referralCode", ["referralCode"])
+    .index("by_ownerTelegramUserId", ["ownerTelegramUserId"]),
 
   affiliateCommissions: defineTable({
     affiliateId: v.string(),

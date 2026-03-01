@@ -30,6 +30,7 @@ import type * as search from "../search.js";
 import type * as seedProducts from "../seedProducts.js";
 import type * as sessions from "../sessions.js";
 import type * as telegram from "../telegram.js";
+import type * as testReferrals from "../testReferrals.js";
 
 import type {
   ApiFromModules,
@@ -60,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   seedProducts: typeof seedProducts;
   sessions: typeof sessions;
   telegram: typeof telegram;
+  testReferrals: typeof testReferrals;
 }>;
 
 /**

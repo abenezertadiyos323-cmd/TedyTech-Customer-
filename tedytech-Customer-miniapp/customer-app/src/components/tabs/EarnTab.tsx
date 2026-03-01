@@ -9,6 +9,7 @@ import { ReferralDebugPanel } from '@/components/ReferralDebugPanel';
 import { storeConfig } from '@/config/storeConfig';
 
 
+
 // ---------------------------------------------------------------------------
 // Local error boundary — catches render errors inside EarnTab only.
 // Prevents a broken Earn tab from crashing the entire app.
@@ -56,22 +57,20 @@ class EarnErrorBoundary extends React.Component<
 // ---------------------------------------------------------------------------
 
 function EarnTabInner() {
-  const { isAuthenticated, isAuthLoading, authUserId, verifiedCustomerId } = useApp();
+  const { telegramUser } = useApp();
   const {
     stats,
     hasAffiliate,
-    canUseAffiliate,
   } = useAffiliateContext();
   const createAffiliate = useCreateAffiliate();
   const [hasTriedCreate, setHasTriedCreate] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [showManualCopyDialog, setShowManualCopyDialog] = useState(false);
 
-  // ── Auto-create affiliate when authenticated user visits Earn tab ─────────
+  // ── Auto-create affiliate on first Earn tab visit ─────────────────────────
+  // Uses telegramUserId directly — no verifiedCustomerId dependency.
   useEffect(() => {
-    if (isAuthLoading) return;
-    if (!isAuthenticated || !authUserId) return;
-    if (!verifiedCustomerId || !canUseAffiliate) return;
+    if (!telegramUser?.id) return;
     if (hasAffiliate || hasTriedCreate) return;
     if (createAffiliate.isPending) return;
 
@@ -83,28 +82,24 @@ function EarnTabInner() {
       toast.error('Failed to join affiliate program');
     });
   }, [
-    isAuthenticated,
-    authUserId,
-    verifiedCustomerId,
-    canUseAffiliate,
+    telegramUser?.id,
     hasAffiliate,
     hasTriedCreate,
-    isAuthLoading,
     createAffiliate,
   ]);
 
-  // Reset when user identity changes
+  // Reset when Telegram user changes
   useEffect(() => {
     setHasTriedCreate(false);
     setMutationError(null);
-  }, [authUserId]);
+  }, [telegramUser?.id]);
 
   const formatCurrency = (amount: number) =>
     `${amount.toLocaleString()} ETB`;
 
   const referralCode = stats.referralCode ?? '';
   const referralLink = stats.referralCode
-    ? `https://t.me/${storeConfig.botUsername}?startapp=ref_${stats.referralCode}`
+    ? `https://t.me/${storeConfig.botUsername}?start=${stats.referralCode}`
     : '';
   const shareMessage = referralLink
     ? `Get your next phone from TedyTech! Use my referral code ${referralCode}: ${referralLink}`
