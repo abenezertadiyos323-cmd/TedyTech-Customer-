@@ -245,8 +245,33 @@ export function BackendReadiness() {
     window.location.reload();
   };
 
+  const handleCopyReport = () => {
+    const timestamp = new Date().toISOString();
+    const commitSha = import.meta.env.VITE_GIT_COMMIT || "unknown";
+    const checklist = checks
+      .map((c) => {
+        const status = c.status === "pending" ? "SKIP" : c.status.toUpperCase();
+        const error = c.error ? ` — ${c.error.substring(0, 80)}` : "";
+        return `  ${status.padEnd(4)} ${c.name}${error}`;
+      })
+      .join("\n");
+
+    const report = `Backend Readiness Report
+Time: ${timestamp}
+Convex: ${convexHost}
+Commit: ${commitSha}
+
+Checks:
+${checklist}`;
+
+    navigator.clipboard.writeText(report).then(() => {
+      alert("Report copied to clipboard!");
+    });
+  };
+
   const passCount = checks.filter((c) => c.status === "pass").length;
   const failCount = checks.filter((c) => c.status === "fail").length;
+  const isReady = failCount === 0 && passCount > 0;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
@@ -255,6 +280,19 @@ export function BackendReadiness() {
         <p className="text-gray-400 mb-6">
           Convex host: <code className="text-yellow-400">{convexHost}</code>
         </p>
+
+        {/* Status Banner */}
+        {passCount > 0 && (
+          <div
+            className={`rounded-lg p-4 mb-6 font-semibold text-lg ${
+              isReady
+                ? "bg-green-900 bg-opacity-50 border-l-4 border-green-500 text-green-300"
+                : "bg-red-900 bg-opacity-50 border-l-4 border-red-500 text-red-300"
+            }`}
+          >
+            {isReady ? "✓ READY" : "✗ NOT READY"}
+          </div>
+        )}
 
         <div className="bg-gray-800 rounded-lg p-6 mb-6">
           <div className="grid grid-cols-2 gap-4 mb-6">
@@ -315,12 +353,20 @@ export function BackendReadiness() {
           </div>
         </div>
 
-        <button
-          onClick={handleRunAgain}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition-colors"
-        >
-          Run Again
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleRunAgain}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded transition-colors"
+          >
+            Run Again
+          </button>
+          <button
+            onClick={handleCopyReport}
+            className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded transition-colors"
+          >
+            Copy Report
+          </button>
+        </div>
 
         <div className="mt-6 text-xs text-gray-500">
           This page is only visible in development mode. It will not appear in
