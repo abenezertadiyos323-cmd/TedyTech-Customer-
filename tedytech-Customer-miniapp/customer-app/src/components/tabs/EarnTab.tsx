@@ -108,10 +108,14 @@ function EarnTabInner() {
     stats.totalReferredCount === 1 ? 'person' : 'people'
   }`;
 
+  // Check if bot is live (not using default username)
+  const isBotReady = import.meta.env.VITE_BOT_USERNAME !== undefined &&
+    import.meta.env.VITE_BOT_USERNAME !== '';
+
   const handleCopyCode = () => {
     if (stats.referralCode) {
       navigator.clipboard.writeText(stats.referralCode).catch(() => {});
-      toast.success('Copied!');
+      toast.success(isBotReady ? 'Code copied!' : 'Code copied — ready to share when bot is live');
     }
   };
 
@@ -251,7 +255,7 @@ function EarnTabInner() {
         {/* Referral Code Section */}
         <Card className="p-5 bg-card border-border">
           <h3 className="text-sm font-semibold text-foreground mb-4">Your Referral Code</h3>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-3">
             <div className="flex-1 bg-muted rounded-lg px-4 py-3 font-mono text-lg font-bold text-center text-foreground tracking-wider">
               {referralCode || '—'}
             </div>
@@ -261,17 +265,30 @@ function EarnTabInner() {
               onClick={handleCopyCode}
               className="shrink-0"
               disabled={!stats.referralCode}
+              title="Copy your referral code"
             >
               <Copy className="w-4 h-4" />
             </Button>
           </div>
+          {!isBotReady && stats.referralCode && (
+            <p className="text-xs text-muted-foreground px-2">
+              ✓ Code ready — share anytime you like!
+            </p>
+          )}
         </Card>
 
         {/* Referral Link Section */}
         <Card className="p-5 bg-card border-border">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Your Referral Link</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold text-foreground">Your Referral Link</h3>
+            {!isBotReady && (
+              <span className="text-xs bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 px-2 py-1 rounded">
+                Bot coming
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-3 mb-4">
-            <div className="flex-1 bg-muted rounded-lg px-4 py-3 text-sm text-muted-foreground truncate">
+            <div className="flex-1 bg-muted rounded-lg px-4 py-3 text-sm text-muted-foreground truncate font-mono">
               {referralLink || '—'}
             </div>
             <Button
@@ -280,17 +297,24 @@ function EarnTabInner() {
               onClick={handleCopyLink}
               className="shrink-0"
               disabled={!stats.referralCode}
+              title={!isBotReady ? 'Bot not live yet — link format will be ready soon' : 'Copy referral link'}
             >
               <Copy className="w-4 h-4" />
             </Button>
           </div>
+          {!isBotReady && stats.referralCode && (
+            <p className="text-xs text-muted-foreground mb-3 px-2">
+              ⏱️ Bot not live yet — link will work after bot is created. Copy your code for now and share when ready!
+            </p>
+          )}
           <Button
             className="w-full gap-2"
             onClick={handleShare}
-            disabled={!stats.referralCode}
+            disabled={!stats.referralCode || !isBotReady}
+            title={!isBotReady ? 'Share will be available once bot is live' : 'Share via Telegram'}
           >
             <Share2 className="w-4 h-4" />
-            Share
+            {isBotReady ? 'Share' : 'Share (coming soon)'}
           </Button>
         </Card>
 
