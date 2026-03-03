@@ -21,6 +21,7 @@ export function BackendReadiness() {
     { name: "favorites:getFavorites", status: "pending" },
     { name: "affiliates:getUserReferralStats", status: "pending" },
     { name: "sessions:createSession", status: "pending" },
+    { name: "threads:listThreads", status: "pending" },
   ]);
 
   const convexUrl = import.meta.env.VITE_CONVEX_URL || "unknown";
@@ -168,6 +169,30 @@ export function BackendReadiness() {
       } catch (e) {
         results.push({
           name: "sessions:createSession",
+          status: "fail",
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
+
+      // 6. threads:listThreads
+      try {
+        const response = await fetch(`${convexUrl}/api/query?name=threads:listThreads`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+        if (response.ok) {
+          results.push({ name: "threads:listThreads", status: "pass" });
+        } else {
+          results.push({
+            name: "threads:listThreads",
+            status: "fail",
+            error: `HTTP ${response.status}`,
+          });
+        }
+      } catch (e) {
+        results.push({
+          name: "threads:listThreads",
           status: "fail",
           error: e instanceof Error ? e.message : String(e),
         });
