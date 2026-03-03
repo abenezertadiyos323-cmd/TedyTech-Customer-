@@ -5,6 +5,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "./contexts/AppContext";
 import Index from "./pages/Index";
 
+// DEV-only backend readiness diagnostic
+const BackendReadiness = import.meta.env.DEV
+  ? lazy(() =>
+      import("@/dev/BackendReadiness").then((m) => ({
+        default: m.BackendReadiness,
+      })),
+    )
+  : null;
+
 // Lazy-load toast providers — they are never visible on first paint,
 // so keeping them out of the main chunk reduces blocking parse time.
 const Toaster = lazy(() =>
@@ -50,6 +59,10 @@ const App = () => {
             {/* Normalise hash to "/" before any route renders */}
             <HashNormalizer />
             <Routes>
+              {/* DEV-only health check page — accessible at /#/__health */}
+              {import.meta.env.DEV && BackendReadiness && (
+                <Route path="__health" element={<BackendReadiness />} />
+              )}
               {/* Single catch-all: any hash Telegram opens with always
                   renders the main app. NotFound is never shown. */}
               <Route path="*" element={<Index />} />
