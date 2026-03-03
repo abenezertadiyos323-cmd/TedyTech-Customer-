@@ -11,18 +11,19 @@ interface CheckResult {
   name: string;
   status: "pending" | "pass" | "fail";
   error?: string;
+  required?: boolean;
 }
 
 export function BackendReadiness() {
   const { telegramUser } = useApp();
   const [checks, setChecks] = useState<CheckResult[]>([
-    { name: "products:listAllProducts", status: "pending" },
-    { name: "products:listProducts", status: "pending" },
-    { name: "search:getSearchPanelData", status: "pending" },
-    { name: "favorites:getFavorites", status: "pending" },
-    { name: "affiliates:getUserReferralStats", status: "pending" },
-    { name: "sessions:createSession", status: "pending" },
-    { name: "threads:listThreads", status: "pending" },
+    { name: "products:listAllProducts", status: "pending", required: true },
+    { name: "products:listProducts", status: "pending", required: true },
+    { name: "search:getSearchPanelData", status: "pending", required: true },
+    { name: "favorites:getFavorites", status: "pending", required: true },
+    { name: "affiliates:getUserReferralStats", status: "pending", required: false },
+    { name: "sessions:createSession", status: "pending", required: true },
+    { name: "threads:listThreads", status: "pending", required: false },
   ]);
 
   const convexUrl = import.meta.env.VITE_CONVEX_URL || "unknown";
@@ -36,6 +37,13 @@ export function BackendReadiness() {
 
   // Get mutation reference for sessions
   const createSessionMutation = useMutation(api.sessions.createSession);
+
+  // Helper to determine if a check is required
+  const isCheckRequired = (checkName: string): boolean => {
+    return !["threads:listThreads", "affiliates:getUserReferralStats"].includes(
+      checkName,
+    );
+  };
 
   // Run checks on mount
   useEffect(() => {
@@ -53,12 +61,17 @@ export function BackendReadiness() {
           body: JSON.stringify({ limit: 1 }),
         });
         if (response.ok) {
-          results.push({ name: "products:listAllProducts", status: "pass" });
+          results.push({
+            name: "products:listAllProducts",
+            status: "pass",
+            required: isCheckRequired("products:listAllProducts"),
+          });
         } else {
           results.push({
             name: "products:listAllProducts",
             status: "fail",
             error: `HTTP ${response.status}`,
+            required: isCheckRequired("products:listAllProducts"),
           });
         }
       } catch (e) {
@@ -66,6 +79,7 @@ export function BackendReadiness() {
           name: "products:listAllProducts",
           status: "fail",
           error: e instanceof Error ? e.message : String(e),
+          required: isCheckRequired("products:listAllProducts"),
         });
       }
 
@@ -83,12 +97,14 @@ export function BackendReadiness() {
             name: "products:listProducts",
             status: "pass",
             error: `returned ${count} item${count !== 1 ? "s" : ""}`,
+            required: isCheckRequired("products:listProducts"),
           });
         } else {
           results.push({
             name: "products:listProducts",
             status: "fail",
             error: `HTTP ${response.status}`,
+            required: isCheckRequired("products:listProducts"),
           });
         }
       } catch (e) {
@@ -96,6 +112,7 @@ export function BackendReadiness() {
           name: "products:listProducts",
           status: "fail",
           error: e instanceof Error ? e.message : String(e),
+          required: isCheckRequired("products:listProducts"),
         });
       }
 
@@ -107,12 +124,17 @@ export function BackendReadiness() {
           body: JSON.stringify({}),
         });
         if (response.ok) {
-          results.push({ name: "search:getSearchPanelData", status: "pass" });
+          results.push({
+            name: "search:getSearchPanelData",
+            status: "pass",
+            required: isCheckRequired("search:getSearchPanelData"),
+          });
         } else {
           results.push({
             name: "search:getSearchPanelData",
             status: "fail",
             error: `HTTP ${response.status}`,
+            required: isCheckRequired("search:getSearchPanelData"),
           });
         }
       } catch (e) {
@@ -120,6 +142,7 @@ export function BackendReadiness() {
           name: "search:getSearchPanelData",
           status: "fail",
           error: e instanceof Error ? e.message : String(e),
+          required: isCheckRequired("search:getSearchPanelData"),
         });
       }
 
@@ -132,12 +155,17 @@ export function BackendReadiness() {
             body: JSON.stringify({ userId: String(telegramUser.id) }),
           });
           if (response.ok) {
-            results.push({ name: "favorites:getFavorites", status: "pass" });
+            results.push({
+              name: "favorites:getFavorites",
+              status: "pass",
+              required: isCheckRequired("favorites:getFavorites"),
+            });
           } else {
             results.push({
               name: "favorites:getFavorites",
               status: "fail",
               error: `HTTP ${response.status}`,
+              required: isCheckRequired("favorites:getFavorites"),
             });
           }
         } catch (e) {
@@ -145,6 +173,7 @@ export function BackendReadiness() {
             name: "favorites:getFavorites",
             status: "fail",
             error: e instanceof Error ? e.message : String(e),
+            required: isCheckRequired("favorites:getFavorites"),
           });
         }
       } else {
@@ -152,6 +181,7 @@ export function BackendReadiness() {
           name: "favorites:getFavorites",
           status: "pending",
           error: "No telegramUser (skipped)",
+          required: isCheckRequired("favorites:getFavorites"),
         });
       }
 
@@ -170,12 +200,14 @@ export function BackendReadiness() {
             results.push({
               name: "affiliates:getUserReferralStats",
               status: "pass",
+              required: isCheckRequired("affiliates:getUserReferralStats"),
             });
           } else {
             results.push({
               name: "affiliates:getUserReferralStats",
               status: "fail",
               error: `HTTP ${response.status}`,
+              required: isCheckRequired("affiliates:getUserReferralStats"),
             });
           }
         } catch (e) {
@@ -183,6 +215,7 @@ export function BackendReadiness() {
             name: "affiliates:getUserReferralStats",
             status: "fail",
             error: e instanceof Error ? e.message : String(e),
+            required: isCheckRequired("affiliates:getUserReferralStats"),
           });
         }
       } else {
@@ -190,18 +223,24 @@ export function BackendReadiness() {
           name: "affiliates:getUserReferralStats",
           status: "pending",
           error: "No telegramUser (skipped)",
+          required: isCheckRequired("affiliates:getUserReferralStats"),
         });
       }
 
       // 7. sessions:createSession - use mutation
       try {
         await createSessionMutation();
-        results.push({ name: "sessions:createSession", status: "pass" });
+        results.push({
+          name: "sessions:createSession",
+          status: "pass",
+          required: isCheckRequired("sessions:createSession"),
+        });
       } catch (e) {
         results.push({
           name: "sessions:createSession",
           status: "fail",
           error: e instanceof Error ? e.message : String(e),
+          required: isCheckRequired("sessions:createSession"),
         });
       }
 
@@ -213,12 +252,17 @@ export function BackendReadiness() {
           body: JSON.stringify({}),
         });
         if (response.ok) {
-          results.push({ name: "threads:listThreads", status: "pass" });
+          results.push({
+            name: "threads:listThreads",
+            status: "pass",
+            required: isCheckRequired("threads:listThreads"),
+          });
         } else {
           results.push({
             name: "threads:listThreads",
             status: "fail",
             error: `HTTP ${response.status}`,
+            required: isCheckRequired("threads:listThreads"),
           });
         }
       } catch (e) {
@@ -226,6 +270,7 @@ export function BackendReadiness() {
           name: "threads:listThreads",
           status: "fail",
           error: e instanceof Error ? e.message : String(e),
+          required: isCheckRequired("threads:listThreads"),
         });
       }
 
@@ -248,30 +293,47 @@ export function BackendReadiness() {
   const handleCopyReport = () => {
     const timestamp = new Date().toISOString();
     const commitSha = import.meta.env.VITE_GIT_COMMIT || "unknown";
-    const checklist = checks
-      .map((c) => {
-        const status = c.status === "pending" ? "SKIP" : c.status.toUpperCase();
-        const error = c.error ? ` — ${c.error.substring(0, 80)}` : "";
-        return `  ${status.padEnd(4)} ${c.name}${error}`;
-      })
-      .join("\n");
+    const requiredChecks = checks.filter((c) => c.required);
+    const optionalChecks = checks.filter((c) => !c.required);
+
+    const formatChecklist = (items: CheckResult[]) =>
+      items
+        .map((c) => {
+          const status = c.status === "pending" ? "SKIP" : c.status.toUpperCase();
+          const error = c.error ? ` — ${c.error.substring(0, 80)}` : "";
+          return `  ${status.padEnd(4)} ${c.name}${error}`;
+        })
+        .join("\n");
 
     const report = `Backend Readiness Report
 Time: ${timestamp}
 Convex: ${convexHost}
 Commit: ${commitSha}
 
-Checks:
-${checklist}`;
+Required Checks:
+${formatChecklist(requiredChecks)}${
+      optionalChecks.length > 0
+        ? `\n\nOptional Checks:\n${formatChecklist(optionalChecks)}`
+        : ""
+    }`;
 
     navigator.clipboard.writeText(report).then(() => {
       alert("Report copied to clipboard!");
     });
   };
 
-  const passCount = checks.filter((c) => c.status === "pass").length;
-  const failCount = checks.filter((c) => c.status === "fail").length;
-  const isReady = failCount === 0 && passCount > 0;
+  // Calculate required and optional counts separately
+  const requiredChecks = checks.filter((c) => c.required !== false);
+  const optionalChecks = checks.filter((c) => c.required === false);
+  const requiredPass = requiredChecks.filter((c) => c.status === "pass").length;
+  const requiredFail = requiredChecks.filter((c) => c.status === "fail").length;
+  const optionalPass = optionalChecks.filter((c) => c.status === "pass").length;
+  const optionalFail = optionalChecks.filter((c) => c.status === "fail").length;
+
+  // READY when all required checks that were executed passed
+  const isReady =
+    requiredFail === 0 &&
+    requiredPass > 0;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">
@@ -282,7 +344,7 @@ ${checklist}`;
         </p>
 
         {/* Status Banner */}
-        {passCount > 0 && (
+        {requiredPass > 0 && (
           <div
             className={`rounded-lg p-4 mb-6 font-semibold text-lg ${
               isReady
@@ -290,66 +352,146 @@ ${checklist}`;
                 : "bg-red-900 bg-opacity-50 border-l-4 border-red-500 text-red-300"
             }`}
           >
-            {isReady ? "✓ READY" : "✗ NOT READY"}
+            {isReady ? "✓ READY" : "✗ NOT READY"} (Required checks)
           </div>
         )}
 
         <div className="bg-gray-800 rounded-lg p-6 mb-6">
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-green-900 bg-opacity-50 p-4 rounded">
-              <div className="text-2xl font-bold text-green-400">{passCount}</div>
-              <div className="text-sm text-green-300">Passed</div>
-            </div>
-            <div className="bg-red-900 bg-opacity-50 p-4 rounded">
-              <div className="text-2xl font-bold text-red-400">{failCount}</div>
-              <div className="text-sm text-red-300">Failed</div>
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-gray-300 mb-3">Required Checks</h3>
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="bg-green-900 bg-opacity-50 p-3 rounded">
+                <div className="text-xl font-bold text-green-400">{requiredPass}</div>
+                <div className="text-xs text-green-300">Passed</div>
+              </div>
+              <div className="bg-red-900 bg-opacity-50 p-3 rounded">
+                <div className="text-xl font-bold text-red-400">{requiredFail}</div>
+                <div className="text-xs text-red-300">Failed</div>
+              </div>
             </div>
           </div>
-
-          <div className="space-y-4">
-            {checks.map((check) => (
-              <div
-                key={check.name}
-                className="border-l-4 pl-4 py-2"
-                style={{
-                  borderColor:
-                    check.status === "pass"
-                      ? "#22c55e"
-                      : check.status === "fail"
-                        ? "#ef4444"
-                        : "#6b7280",
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-3 h-3 rounded-full ${
-                      check.status === "pass"
-                        ? "bg-green-500"
-                        : check.status === "fail"
-                          ? "bg-red-500"
-                          : "bg-gray-500"
-                    }`}
-                  />
-                  <code className="font-mono text-sm">{check.name}</code>
-                  <span
-                    className={`ml-auto text-sm font-semibold ${
-                      check.status === "pass"
-                        ? "text-green-400"
-                        : check.status === "fail"
-                          ? "text-red-400"
-                          : "text-gray-400"
-                    }`}
-                  >
-                    {check.status.toUpperCase()}
-                  </span>
+          {optionalChecks.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-300 mb-3">Optional Checks</h3>
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="bg-green-900 bg-opacity-50 p-3 rounded">
+                  <div className="text-xl font-bold text-green-400">{optionalPass}</div>
+                  <div className="text-xs text-green-300">Passed</div>
                 </div>
-                {check.error && (
-                  <div className="mt-2 text-xs text-gray-400 ml-6">
-                    {check.error}
-                  </div>
-                )}
+                <div className="bg-red-900 bg-opacity-50 p-3 rounded">
+                  <div className="text-xl font-bold text-red-400">{optionalFail}</div>
+                  <div className="text-xs text-red-300">Failed</div>
+                </div>
               </div>
-            ))}
+            </div>
+          )}
+
+          <div className="space-y-6">
+            {/* Required Checks */}
+            <div>
+              <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">
+                Required
+              </h4>
+              <div className="space-y-2">
+                {requiredChecks.map((check) => (
+                  <div
+                    key={check.name}
+                    className="border-l-4 pl-4 py-2"
+                    style={{
+                      borderColor:
+                        check.status === "pass"
+                          ? "#22c55e"
+                          : check.status === "fail"
+                            ? "#ef4444"
+                            : "#6b7280",
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-3 h-3 rounded-full ${
+                          check.status === "pass"
+                            ? "bg-green-500"
+                            : check.status === "fail"
+                              ? "bg-red-500"
+                              : "bg-gray-500"
+                        }`}
+                      />
+                      <code className="font-mono text-sm">{check.name}</code>
+                      <span
+                        className={`ml-auto text-sm font-semibold ${
+                          check.status === "pass"
+                            ? "text-green-400"
+                            : check.status === "fail"
+                              ? "text-red-400"
+                              : "text-gray-400"
+                        }`}
+                      >
+                        {check.status.toUpperCase()}
+                      </span>
+                    </div>
+                    {check.error && (
+                      <div className="mt-2 text-xs text-gray-400 ml-6">
+                        {check.error}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Optional Checks */}
+            {optionalChecks.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-gray-400 uppercase mb-3">
+                  Optional
+                </h4>
+                <div className="space-y-2">
+                  {optionalChecks.map((check) => (
+                    <div
+                      key={check.name}
+                      className="border-l-4 pl-4 py-2"
+                      style={{
+                        borderColor:
+                          check.status === "pass"
+                            ? "#22c55e"
+                            : check.status === "fail"
+                              ? "#ef4444"
+                              : "#6b7280",
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            check.status === "pass"
+                              ? "bg-green-500"
+                              : check.status === "fail"
+                                ? "bg-red-500"
+                                : "bg-gray-500"
+                          }`}
+                        />
+                        <code className="font-mono text-sm">{check.name}</code>
+                        <span
+                          className={`ml-auto text-sm font-semibold ${
+                            check.status === "pass"
+                              ? "text-green-400"
+                              : check.status === "fail"
+                                ? "text-red-400"
+                                : "text-gray-400"
+                          }`}
+                        >
+                          {check.status.toUpperCase()}
+                        </span>
+                      </div>
+                      {check.error && (
+                        <div className="mt-2 text-xs text-gray-400 ml-6">
+                          {check.error}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
