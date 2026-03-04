@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Search, X, Menu, Clock, TrendingUp, Flame, Star } from "lucide-react";
 import { useApp } from "@/contexts/AppContext";
-import { useSearchPanelData, useLogSearch, useSearchProducts } from "@/hooks/useSearch";
+import { useSearchPanelData, useLogSearch, useSearchProducts, type SearchProductResult } from "@/hooks/useSearch";
 import { useDebounce } from "@/hooks/useDebounce";
 import { SearchResultsDropdown } from "./SearchResultsDropdown";
 import type { Phone } from "@/types/phone";
@@ -100,9 +100,37 @@ export function SearchBar({ onOpenFilters, onSelectPhone }: SearchBarProps) {
     inputRef.current?.blur();
   };
 
-  const handleSelectSearchResult = (phone: Phone) => {
+  const handleSelectSearchResult = (result: SearchProductResult) => {
     setShowSearchResults(false);
     setShowSuggestions(false);
+
+    // Convert SearchResult to Phone
+    const phone: Phone = {
+      id: result._id,
+      brand: result.brand || "",
+      model: result.model || "",
+      ram: null,
+      storage_gb: result.storage || null,
+      price_birr: result.price,
+      old_price_birr: null,
+      condition: result.condition || "used",
+      main_image_url: result.mainImageUrl || "/placeholder.svg",
+      description: null,
+      color: null,
+      in_stock: true,
+      stock_count: null,
+      is_new_arrival: false,
+      is_popular: false,
+      is_premium: false,
+      is_accessory: false,
+      exchange_available: result.exchange_available ?? false,
+      negotiable: null,
+      key_highlights: null,
+      key_specs: null,
+      created_at: null,
+      updated_at: null,
+    };
+
     onSelectPhone(phone);
   };
 
@@ -167,7 +195,7 @@ export function SearchBar({ onOpenFilters, onSelectPhone }: SearchBarProps) {
       {/* Search Results Dropdown - Live search while typing */}
       {showSearchResults && (
         <SearchResultsDropdown
-          results={searchResults as Phone[]}
+          results={searchResults}
           isLoading={isSearching}
           query={localQuery}
           onSelectResult={handleSelectSearchResult}

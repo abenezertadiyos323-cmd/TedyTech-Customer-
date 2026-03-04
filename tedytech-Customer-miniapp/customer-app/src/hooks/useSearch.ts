@@ -39,6 +39,19 @@ export function useLogSearch(sessionId: string | null) {
   };
 }
 
+export interface SearchProductResult {
+  _id: string;
+  phoneType?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  storage?: number | null;
+  condition?: string | null;
+  price: number;
+  images?: string[];
+  mainImageUrl?: string | null;
+  exchange_available?: boolean | null;
+}
+
 export function useSearchProducts(
   term: string | null,
   opts?: { limit?: number },
@@ -50,7 +63,7 @@ export function useSearchProducts(
 
   const data = useConvexQuery(api.search.searchProducts, args);
   return {
-    data: (data ?? undefined) as Array<any> | undefined,
+    data: (data ?? undefined) as SearchProductResult[] | undefined,
     isLoading: data === undefined,
     error: null,
   };
