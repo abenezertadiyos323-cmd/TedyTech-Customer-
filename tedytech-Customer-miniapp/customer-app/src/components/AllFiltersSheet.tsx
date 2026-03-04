@@ -32,11 +32,13 @@ const budgetRanges = [
 // Locked UI storage options (in GB)
 const storageOptions = [64, 128, 256, 512];
 
-// Locked UI condition options with mapping to DB values
 const conditionOptions = [
-  { label: 'New', dbValues: ['new', 'New'] },
-  { label: 'Like New', dbValues: ['like_new', 'like new', 'Like New', 'likenew'] },
-  { label: 'Used', dbValues: ['used', 'Used'] },
+  { label: 'New',       value: 'New',       description: 'Sealed box, never used' },
+  { label: 'Like New',  value: 'Like New',  description: 'Opened but mint, no marks' },
+  { label: 'Excellent', value: 'Excellent', description: 'Barely used, minimal wear' },
+  { label: 'Good',      value: 'Good',      description: 'Light wear, fully functional' },
+  { label: 'Fair',      value: 'Fair',      description: 'Visible wear, all features work' },
+  { label: 'Poor',      value: 'Poor',      description: 'Heavy wear or minor issues' },
 ];
 
 const sortOptions: { value: SortOption; label: string }[] = [
@@ -96,11 +98,11 @@ export function AllFiltersSheet({ isOpen, onClose }: AllFiltersSheetProps) {
     }
   };
 
-  const handleConditionToggle = (conditionLabel: string) => {
+  const handleConditionSelect = (conditionLabel: string) => {
     if (selectedConditions.includes(conditionLabel)) {
-      setSelectedConditions(selectedConditions.filter(c => c !== conditionLabel));
+      setSelectedConditions([]);
     } else {
-      setSelectedConditions([...selectedConditions, conditionLabel]);
+      setSelectedConditions([conditionLabel]);
     }
   };
 
@@ -230,27 +232,35 @@ export function AllFiltersSheet({ isOpen, onClose }: AllFiltersSheetProps) {
             </div>
           </div>
 
-          {/* Condition - locked UI list */}
+          {/* Condition */}
           <div className="animate-fade-in" style={{ animationDelay: '0.25s' }}>
             <h4 className="text-sm font-semibold text-foreground mb-3">Condition</h4>
-            <div className="flex flex-wrap gap-2">
-              {conditionOptions.map((condition) => (
-                <button
-                  key={condition.label}
-                  onClick={() => handleConditionToggle(condition.label)}
-                  className={cn(
-                    "flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 press-effect",
-                    selectedConditions.includes(condition.label)
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground hover:bg-muted/80"
-                  )}
-                >
-                  {condition.label}
-                  {selectedConditions.includes(condition.label) && (
-                    <Check className="w-3.5 h-3.5" />
-                  )}
-                </button>
-              ))}
+            <div className="grid grid-cols-2 gap-2">
+              {conditionOptions.map((opt) => {
+                const isSelected = selectedConditions.includes(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleConditionSelect(opt.value)}
+                    className={cn(
+                      "p-3 rounded-xl border text-left transition-all duration-200 press-effect",
+                      isSelected
+                        ? "border-primary bg-primary/10"
+                        : "border-border bg-muted/40 hover:bg-muted/70"
+                    )}
+                  >
+                    <p className={cn(
+                      "text-xs font-semibold leading-tight",
+                      isSelected ? "text-primary" : "text-foreground"
+                    )}>
+                      {opt.label}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                      {opt.description}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

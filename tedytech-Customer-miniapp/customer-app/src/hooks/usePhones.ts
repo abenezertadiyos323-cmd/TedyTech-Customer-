@@ -154,6 +154,10 @@ function normalizePhone(raw: RawProduct): Phone {
           .filter((u) => u.length > 0)
           .slice(0, 6)
       : undefined,
+    phoneType:
+      typeof raw.phoneType === "string" && raw.phoneType.trim()
+        ? raw.phoneType.trim()
+        : undefined,
   };
 }
 
@@ -171,33 +175,26 @@ function useNormalizedProducts() {
   };
 }
 
-// Brand mapping: UI brand names to DB brand values
-const BRAND_MAPPING: Record<string, { brands: string[]; exclude?: boolean }> = {
-  iPhones: { brands: ["Apple", "iPhones", "iPhone"] },
-  Samsung: { brands: ["Samsung"] },
-  Tecno: { brands: ["Tecno"] },
-  Infinix: { brands: ["Infinix"] },
-  Xiaomi: { brands: ["Xiaomi", "Redmi", "Poco"] },
+// Brand keywords: case-insensitive substring match against phoneType/searchNormalized
+const BRAND_KEYWORDS: Record<string, { keywords: string[]; exclude?: boolean }> = {
+  iPhones: { keywords: ["iphone", "apple"] },
+  Samsung: { keywords: ["samsung"] },
+  Tecno: { keywords: ["tecno"] },
+  Infinix: { keywords: ["infinix"] },
+  Xiaomi: { keywords: ["xiaomi", "redmi", "poco"] },
   "Other Android": {
-    brands: [
-      "Apple",
-      "iPhones",
-      "iPhone",
-      "Samsung",
-      "Tecno",
-      "Infinix",
-      "Xiaomi",
-      "Redmi",
-      "Poco",
-    ],
+    keywords: ["iphone", "apple", "samsung", "tecno", "infinix", "xiaomi", "redmi", "poco"],
     exclude: true,
   },
 };
 
 const CONDITION_MAPPING: Record<string, string[]> = {
   New: ["new", "brand_new"],
-  "Like New": ["like_new", "excellent"],
-  Used: ["used", "good", "fair"],
+  "Like New": ["like_new"],
+  Excellent: ["excellent"],
+  Good: ["good"],
+  Fair: ["fair"],
+  Poor: ["poor"],
 };
 
 interface BrowseFilters {
@@ -262,24 +259,20 @@ export function useBrowsePhones(filters: BrowseFilters) {
   }
 
   if (filters.brands?.length) {
-    const includesBrands: string[] = [];
-    const excludeBrands: string[] = [];
+    result = result.filter((phone) => {
+      const searchText = (
+        (phone as Phone & { searchNormalized?: string }).searchNormalized ??
+        phone.phoneType ??
+        `${phone.brand} ${phone.model}`
+      ).toLowerCase();
 
-    for (const uiBrand of filters.brands) {
-      const mapping = BRAND_MAPPING[uiBrand];
-      if (mapping) {
-        if (mapping.exclude) excludeBrands.push(...mapping.brands);
-        else includesBrands.push(...mapping.brands);
-      } else {
-        includesBrands.push(uiBrand);
-      }
-    }
-
-    if (excludeBrands.length > 0 && includesBrands.length === 0) {
-      result = result.filter((phone) => !excludeBrands.includes(phone.brand));
-    } else if (includesBrands.length > 0) {
-      result = result.filter((phone) => includesBrands.includes(phone.brand));
-    }
+      return filters.brands!.some((uiBrand) => {
+        const mapping = BRAND_KEYWORDS[uiBrand];
+        if (!mapping) return searchText.includes(uiBrand.toLowerCase());
+        const hasKeyword = mapping.keywords.some((kw) => searchText.includes(kw));
+        return mapping.exclude ? !hasKeyword : hasKeyword;
+      });
+    });
   }
 
   if (filters.storage?.length) {

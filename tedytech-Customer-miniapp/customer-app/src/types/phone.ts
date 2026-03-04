@@ -48,6 +48,7 @@ export interface Phone {
   simType?: string;
   operatingSystem?: string;
   features?: string;
+  phoneType?: string;
   images?: string[];
   created_at: string | null;
   updated_at: string | null;
