@@ -9,6 +9,7 @@ export interface ProductVM {
   condition: string;
   brand: string;
   model: string;
+  storageGb?: number | null;
 }
 
 function normalizeString(value: unknown, fallback = ""): string {
@@ -85,6 +86,8 @@ export function mapToProductVM(raw: Record<string, unknown>): ProductVM {
         ? inStockValue > 0
         : true;
 
+  const storageGb = normalizeNumber(raw.storage_gb, 0) || undefined;
+
   return {
     id,
     title,
@@ -94,6 +97,7 @@ export function mapToProductVM(raw: Record<string, unknown>): ProductVM {
     condition,
     brand,
     model,
+    storageGb: storageGb,
   };
 }
 

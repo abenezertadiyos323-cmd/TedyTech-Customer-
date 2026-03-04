@@ -62,16 +62,22 @@ export function ProductCard({ product, onClick, index = 0 }: ProductCardProps) {
       </div>
 
       <div className="p-3">
-        <h3 className="font-semibold text-foreground text-sm leading-tight mb-1 line-clamp-1">
+        <h3 className="font-medium text-foreground text-xs leading-tight mb-2 line-clamp-2">
           {product.title}
         </h3>
-        <div className="flex flex-wrap items-center gap-1.5 mb-2">
-          <span className="text-xs text-muted-foreground">{product.condition}</span>
-          <span className={cn("text-xs px-1.5 py-0.5 rounded font-medium", product.inStock ? "bg-success/25 text-[hsl(145_70%_45%)]" : "bg-muted text-muted-foreground")}>
-            {product.inStock ? "In Stock" : "Out of Stock"}
-          </span>
+        <div className="space-y-1.5 mb-2">
+          {product.storageGb && (
+            <div className="inline-block">
+              <span className="text-xs bg-muted/60 text-muted-foreground px-2 py-1 rounded-md font-medium">
+                {product.storageGb}GB
+              </span>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            {product.condition}
+          </p>
         </div>
-        <p className="text-price text-base mb-1">
+        <p className="text-foreground text-base font-bold">
           {product.priceBirr.toLocaleString()} Birr
         </p>
       </div>

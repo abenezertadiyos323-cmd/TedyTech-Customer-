@@ -240,28 +240,54 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
 
       {/* Content */}
       <div className="p-4 space-y-6">
-        {/* Title & Price */}
+        {/* 1. Phone Name */}
         <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-2xl font-bold text-foreground">{displayName}</h2>
-            <span className={cn(
-              "text-xs px-2 py-1 rounded-lg",
-              product.condition.toLowerCase() === 'new' ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"
-            )}>
-              {getConditionLabel(product.condition)}
-            </span>
-          </div>
-          <p className="text-2xl font-bold text-primary mb-2">{formatPrice(currentPrice)}</p>
+          <h2 className="text-2xl font-bold text-foreground">{displayName}</h2>
+        </div>
+
+        {/* 2. Price */}
+        <div className="animate-fade-in" style={{ animationDelay: '0.15s' }}>
+          <p className="text-3xl font-bold text-primary">{formatPrice(currentPrice)}</p>
           {rawPhone?.old_price_birr && rawPhone.old_price_birr > currentPrice && (
-            <p className="text-sm text-muted-foreground line-through">
+            <p className="text-sm text-muted-foreground line-through mt-1">
               {formatPrice(rawPhone.old_price_birr)}
             </p>
           )}
         </div>
 
-        {/* Color Selector */}
+        {/* 3. Quick Info Badges */}
+        <div className="flex flex-wrap gap-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          {rawPhone?.storage_gb && (
+            <span className="inline-block bg-primary/15 text-primary px-3 py-1.5 rounded-lg text-sm font-medium">
+              {rawPhone.storage_gb}GB Storage
+            </span>
+          )}
+          {product.condition && (
+            <span className={cn(
+              "inline-block px-3 py-1.5 rounded-lg text-sm font-medium",
+              product.condition.toLowerCase() === 'new' ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"
+            )}>
+              {getConditionLabel(product.condition)}
+            </span>
+          )}
+        </div>
+
+        {/* 4. Exchange Section */}
+        {rawPhone?.exchange_available !== undefined && rawPhone?.exchange_available !== null && (
+          <div className="animate-fade-in" style={{ animationDelay: '0.25s' }}>
+            <div className="bg-muted/40 rounded-xl p-3">
+              <p className="text-sm font-medium text-foreground mb-2">
+                Exchange Available: <span className={rawPhone.exchange_available ? "text-success" : "text-muted-foreground"}>
+                  {rawPhone.exchange_available ? 'Yes' : 'No'}
+                </span>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Variant Selectors (Color & Storage) - Optional */}
         {uniqueColors.length > 1 && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.15s' }}>
+          <div className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
             <h3 className="text-sm font-semibold text-foreground mb-3">Color</h3>
             <div className="flex flex-wrap gap-2">
               {uniqueColors.map(color => (
@@ -284,7 +310,7 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
 
         {/* Storage Selector */}
         {uniqueStorages.length > 0 && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <div className="animate-fade-in" style={{ animationDelay: '0.35s' }}>
             <h3 className="text-sm font-semibold text-foreground mb-3">Storage</h3>
             <div className="flex flex-wrap gap-2">
               {uniqueStorages.map(storage => {
@@ -313,46 +339,11 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
           </div>
         )}
 
-        {/* RAM */}
-        {rawPhone?.ram && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.25s' }}>
-            <h3 className="text-sm font-semibold text-foreground mb-3">RAM</h3>
-            <div className="flex flex-wrap gap-2">
-              <button
-                disabled
-                className={cn(
-                  "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300",
-                  "bg-muted text-foreground cursor-default"
-                )}
-              >
-                {rawPhone.ram}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Storage Specs */}
-        {rawPhone?.storage_gb && !uniqueStorages.length && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
-            <h3 className="text-sm font-semibold text-foreground mb-3">Storage</h3>
-            <div className="flex flex-wrap gap-2">
-              <button
-                disabled
-                className={cn(
-                  "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300",
-                  "bg-muted text-foreground cursor-default"
-                )}
-              >
-                {rawPhone.storage_gb}GB
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Specifications */}
+        {/* 5. Specifications */}
         {rawPhone && (
           (() => {
             const specs = [
+              { label: 'RAM', value: (rawPhone as any)?.ram },
               { label: 'Screen Size', value: (rawPhone as any)?.screenSize },
               { label: 'Battery', value: (rawPhone as any)?.battery },
               { label: 'Main Camera', value: (rawPhone as any)?.mainCamera },
@@ -379,45 +370,17 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
           })()
         )}
 
-        {/* Condition */}
-        {product.condition && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.35s' }}>
-            <h3 className="text-sm font-semibold text-foreground mb-3">Condition</h3>
-            <div className="flex flex-wrap gap-2">
-              <button
-                disabled
-                className={cn(
-                  "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300",
-                  "bg-muted text-foreground cursor-default"
-                )}
-              >
-                {getConditionLabel(product.condition)}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Exchange Available */}
-        {rawPhone?.exchange_available !== undefined && rawPhone?.exchange_available !== null && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.4s' }}>
-            <h3 className="text-sm font-semibold text-foreground mb-3">Exchange Available</h3>
-            <div className="flex flex-wrap gap-2">
-              <button
-                disabled
-                className={cn(
-                  "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300",
-                  "bg-muted text-foreground cursor-default"
-                )}
-              >
-                {rawPhone.exchange_available ? 'Yes' : 'No'}
-              </button>
-            </div>
+        {/* 6. Features */}
+        {(rawPhone as any)?.features && (
+          <div className="animate-fade-in" style={{ animationDelay: '0.45s' }}>
+            <h3 className="font-semibold text-foreground mb-2">Features</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">{(rawPhone as any).features}</p>
           </div>
         )}
 
         {/* Key Highlights */}
         {highlights.length > 0 && (
-          <div className="bg-surface-section rounded-2xl p-4 border border-border animate-fade-in hover-lift" style={{ animationDelay: '0.25s' }}>
+          <div className="bg-surface-section rounded-2xl p-4 border border-border animate-fade-in hover-lift" style={{ animationDelay: '0.5s' }}>
             <h3 className="font-semibold text-foreground mb-1">Key Highlights</h3>
             <p className="text-xs text-muted-foreground mb-3">Updated by our team for this phone</p>
             <ul className="space-y-2">
@@ -425,7 +388,7 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
                 <li
                   key={index}
                   className="flex items-start gap-2 opacity-0 animate-fade-in"
-                  style={{ animationDelay: `${0.3 + index * 0.05}s`, animationFillMode: 'forwards' }}
+                  style={{ animationDelay: `${0.55 + index * 0.05}s`, animationFillMode: 'forwards' }}
                 >
                   <Check className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
                   <span className="text-sm text-foreground">{highlight}</span>
@@ -437,14 +400,14 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
 
         {/* Key Specs */}
         {specs && Object.keys(specs).length > 0 && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.35s' }}>
+          <div className="animate-fade-in" style={{ animationDelay: '0.55s' }}>
             <h3 className="font-semibold text-foreground mb-3">Key Specs</h3>
             <ul className="space-y-2">
               {Object.entries(specs).map(([key, value], index) => (
                 <li
                   key={key}
                   className="flex items-start gap-2 opacity-0 animate-fade-in"
-                  style={{ animationDelay: `${0.4 + index * 0.05}s`, animationFillMode: 'forwards' }}
+                  style={{ animationDelay: `${0.6 + index * 0.05}s`, animationFillMode: 'forwards' }}
                 >
                   <span className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0" />
                   <span className="text-sm text-muted-foreground">
@@ -456,17 +419,9 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
           </div>
         )}
 
-        {/* Features */}
-        {(rawPhone as any)?.features && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.45s' }}>
-            <h3 className="font-semibold text-foreground mb-2">Features</h3>
-            <p className="text-sm text-muted-foreground">{(rawPhone as any).features}</p>
-          </div>
-        )}
-
         {/* Description */}
         {rawPhone?.description && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.5s' }}>
+          <div className="animate-fade-in" style={{ animationDelay: '0.65s' }}>
             <h3 className="font-semibold text-foreground mb-2">Description</h3>
             <p className="text-sm text-muted-foreground">{rawPhone.description}</p>
           </div>
