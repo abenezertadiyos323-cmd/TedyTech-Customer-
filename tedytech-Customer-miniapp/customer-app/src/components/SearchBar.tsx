@@ -156,6 +156,18 @@ export function SearchBar({ onOpenFilters, onSelectPhone }: SearchBarProps) {
     setShowSearchResults(false);
   };
 
+  const handleCloseSearch = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setLocalQuery("");
+    setSearchQuery("");
+    setIsSearchApplied(false);
+    setShowSuggestions(false);
+    setShowSearchResults(false);
+    setIsFocused(false);
+    requestAnimationFrame(() => inputRef.current?.blur());
+  };
+
   const showFocusScreen = isFocused && !localQuery.trim();
 
   return (
@@ -205,13 +217,14 @@ export function SearchBar({ onOpenFilters, onSelectPhone }: SearchBarProps) {
       {/* Focus screen - Recent/Hot/Top/Trending */}
       {showFocusScreen && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-2xl border border-border shadow-lg z-50 overflow-hidden animate-fade-in">
-          <div className="max-h-[70vh] overflow-y-auto">
+          <div className="max-h-[70vh] overflow-y-auto" onMouseDown={(e) => e.stopPropagation()}>
             {/* Sticky header with X button */}
-            <div className="sticky top-0 z-10 bg-card flex justify-end px-3 py-2 border-b border-border">
+            <div className="sticky top-0 z-40 bg-card flex justify-end px-3 py-2 border-b border-border">
               <button
-                onClick={() => { handleClear(); inputRef.current?.blur(); }}
+                type="button"
+                onClick={handleCloseSearch}
                 aria-label="Close search"
-                className="w-8 h-8 flex items-center justify-center hover:bg-muted rounded-full transition-colors"
+                className="w-8 h-8 flex items-center justify-center hover:bg-muted rounded-full transition-colors pointer-events-auto"
               >
                 <X className="w-4 h-4 text-muted-foreground" />
               </button>
