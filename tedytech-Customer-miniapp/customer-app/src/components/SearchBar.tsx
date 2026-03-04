@@ -219,7 +219,7 @@ export function SearchBar({ onOpenFilters, onSelectPhone }: SearchBarProps) {
         <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-2xl border border-border shadow-lg z-50 overflow-hidden animate-fade-in">
           <div className="max-h-[70vh] overflow-y-auto" onMouseDown={(e) => e.stopPropagation()}>
             {/* Sticky header with X button */}
-            <div className="sticky top-0 z-40 bg-card flex justify-end px-3 py-2 border-b border-border">
+            <div className="sticky top-0 z-40 bg-card flex justify-end px-3 py-1 border-b border-border">
               <button
                 type="button"
                 onClick={handleCloseSearch}
@@ -232,8 +232,8 @@ export function SearchBar({ onOpenFilters, onSelectPhone }: SearchBarProps) {
 
             {/* Recent Searches */}
           {recentSearches.length > 0 && (
-            <div className="p-4 border-b border-border">
-              <div className="flex items-center gap-2 mb-3">
+            <div className="px-4 pt-2 pb-4 border-b border-border">
+              <div className="flex items-center gap-2 mb-2">
                 <Clock className="w-4 h-4 text-muted-foreground" />
                 <h4 className="text-sm font-semibold text-foreground">
                   Recent Searches
