@@ -239,17 +239,13 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-6">
-        {/* 1. Phone Name */}
+      <div className="p-4 space-y-5">
+        {/* 1. Phone Name + Price */}
         <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
-          <h2 className="text-2xl font-bold text-foreground">{displayName}</h2>
-        </div>
-
-        {/* 2. Price */}
-        <div className="animate-fade-in" style={{ animationDelay: '0.15s' }}>
-          <p className="text-3xl font-bold text-primary">{formatPrice(currentPrice)}</p>
+          <h2 className="text-xl font-bold text-foreground mb-1">{displayName}</h2>
+          <p className="text-2xl font-bold text-primary">{formatPrice(currentPrice)}</p>
           {rawPhone?.old_price_birr && rawPhone.old_price_birr > currentPrice && (
-            <p className="text-sm text-muted-foreground line-through mt-1">
+            <p className="text-sm text-muted-foreground line-through mt-0.5">
               {formatPrice(rawPhone.old_price_birr)}
             </p>
           )}
@@ -272,77 +268,20 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
           )}
         </div>
 
-        {/* 4. Exchange Section */}
+        {/* 4. Exchange Availability */}
         {rawPhone?.exchange_available !== undefined && rawPhone?.exchange_available !== null && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.25s' }}>
-            <div className="bg-muted/40 rounded-xl p-3">
-              <p className="text-sm font-medium text-foreground mb-2">
-                Exchange Available: <span className={rawPhone.exchange_available ? "text-success" : "text-muted-foreground"}>
-                  {rawPhone.exchange_available ? 'Yes' : 'No'}
-                </span>
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Variant Selectors (Color & Storage) - Optional */}
-        {uniqueColors.length > 1 && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
-            <h3 className="text-sm font-semibold text-foreground mb-3">Color</h3>
-            <div className="flex flex-wrap gap-2">
-              {uniqueColors.map(color => (
-                <button
-                  key={color}
-                  onClick={() => setSelectedColor(color)}
-                  className={cn(
-                    "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 press-effect",
-                    selectedColor === color
-                      ? "bg-primary text-primary-foreground shadow-button scale-105"
-                      : "bg-muted text-foreground hover:bg-muted/80"
-                  )}
-                >
-                  {color}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Storage Selector */}
-        {uniqueStorages.length > 0 && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.35s' }}>
-            <h3 className="text-sm font-semibold text-foreground mb-3">Storage</h3>
-            <div className="flex flex-wrap gap-2">
-              {uniqueStorages.map(storage => {
-                const variant = variants.find(v => v.storage_gb === storage);
-                const inStock = variant?.in_stock !== false;
-                return (
-                  <button
-                    key={storage}
-                    onClick={() => setSelectedStorage(storage)}
-                    disabled={!inStock}
-                    className={cn(
-                      "px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 press-effect",
-                      selectedStorage === storage
-                        ? "bg-primary text-primary-foreground shadow-button scale-105"
-                        : inStock
-                          ? "bg-muted text-foreground hover:bg-muted/80"
-                          : "bg-muted/50 text-muted-foreground cursor-not-allowed"
-                    )}
-                  >
-                    {storage}GB
-                    {!inStock && " (Out)"}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <p className="text-sm text-foreground animate-fade-in" style={{ animationDelay: '0.25s' }}>
+            Exchange:{' '}
+            <span className={rawPhone.exchange_available ? 'text-success font-medium' : 'text-muted-foreground'}>
+              {rawPhone.exchange_available ? 'Available' : 'Not Available'}
+            </span>
+          </p>
         )}
 
         {/* 5. Specifications */}
         {rawPhone && (
           (() => {
-            const specs = [
+            const specsRows = [
               { label: 'RAM', value: (rawPhone as any)?.ram },
               { label: 'Screen Size', value: (rawPhone as any)?.screenSize },
               { label: 'Battery', value: (rawPhone as any)?.battery },
@@ -351,17 +290,16 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
               { label: 'SIM Type', value: (rawPhone as any)?.simType },
               { label: 'Color', value: (rawPhone as any)?.color },
               { label: 'Operating System', value: (rawPhone as any)?.operatingSystem },
-            ];
-            const hasSpecs = specs.some(spec => spec.value);
+            ].filter(s => s.value);
 
-            return hasSpecs && (
-              <div className="animate-fade-in" style={{ animationDelay: '0.4s' }}>
-                <h3 className="text-sm font-semibold text-foreground mb-3">Specifications</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {specs.map(spec => spec.value && (
-                    <div key={spec.label}>
-                      <p className="text-xs text-muted-foreground font-medium">{spec.label}</p>
-                      <p className="text-sm text-foreground mt-1">{spec.value}</p>
+            return specsRows.length > 0 && (
+              <div className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
+                <h3 className="text-sm font-semibold text-foreground mb-2">Specifications</h3>
+                <div className="divide-y divide-border/50">
+                  {specsRows.map(spec => (
+                    <div key={spec.label} className="flex items-center justify-between py-2.5">
+                      <span className="text-sm text-muted-foreground">{spec.label}</span>
+                      <span className="text-sm font-medium text-foreground text-right max-w-[55%]">{spec.value}</span>
                     </div>
                   ))}
                 </div>
