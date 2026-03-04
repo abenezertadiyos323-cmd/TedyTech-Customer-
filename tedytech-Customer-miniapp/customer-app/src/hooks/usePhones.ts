@@ -302,16 +302,24 @@ export function usePhoneDetail(phoneId: string | null) {
   const { products, isLoading } = useNormalizedProducts();
   const found = phoneId ? products.find((phone) => phone.id === phoneId) ?? null : null;
 
-  const images = found?.main_image_url
-    ? [
-        {
-          id: `${found.id}-img-0`,
+  const images =
+    found?.images && found.images.length > 0
+      ? found.images.map((url, i) => ({
+          id: `${found.id}-img-${i}`,
           phone_id: found.id,
-          image_url: found.main_image_url,
-          sort_order: 0,
-        },
-      ]
-    : [];
+          image_url: url,
+          sort_order: i,
+        }))
+      : found?.main_image_url
+        ? [
+            {
+              id: `${found.id}-img-0`,
+              phone_id: found.id,
+              image_url: found.main_image_url,
+              sort_order: 0,
+            },
+          ]
+        : [];
 
   const data = (found
     ? { phone: found, images, variants: [] }
