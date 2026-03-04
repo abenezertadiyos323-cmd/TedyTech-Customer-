@@ -349,6 +349,36 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
           </div>
         )}
 
+        {/* Specifications */}
+        {rawPhone && (
+          (() => {
+            const specs = [
+              { label: 'Screen Size', value: (rawPhone as any)?.screenSize },
+              { label: 'Battery', value: (rawPhone as any)?.battery },
+              { label: 'Main Camera', value: (rawPhone as any)?.mainCamera },
+              { label: 'Selfie Camera', value: (rawPhone as any)?.selfieCamera },
+              { label: 'SIM Type', value: (rawPhone as any)?.simType },
+              { label: 'Color', value: (rawPhone as any)?.color },
+              { label: 'Operating System', value: (rawPhone as any)?.operatingSystem },
+            ];
+            const hasSpecs = specs.some(spec => spec.value);
+
+            return hasSpecs && (
+              <div className="animate-fade-in" style={{ animationDelay: '0.4s' }}>
+                <h3 className="text-sm font-semibold text-foreground mb-3">Specifications</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {specs.map(spec => spec.value && (
+                    <div key={spec.label}>
+                      <p className="text-xs text-muted-foreground font-medium">{spec.label}</p>
+                      <p className="text-sm text-foreground mt-1">{spec.value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()
+        )}
+
         {/* Condition */}
         {product.condition && (
           <div className="animate-fade-in" style={{ animationDelay: '0.35s' }}>
@@ -426,9 +456,17 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
           </div>
         )}
 
+        {/* Features */}
+        {(rawPhone as any)?.features && (
+          <div className="animate-fade-in" style={{ animationDelay: '0.45s' }}>
+            <h3 className="font-semibold text-foreground mb-2">Features</h3>
+            <p className="text-sm text-muted-foreground">{(rawPhone as any).features}</p>
+          </div>
+        )}
+
         {/* Description */}
         {rawPhone?.description && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.4s' }}>
+          <div className="animate-fade-in" style={{ animationDelay: '0.5s' }}>
             <h3 className="font-semibold text-foreground mb-2">Description</h3>
             <p className="text-sm text-muted-foreground">{rawPhone.description}</p>
           </div>
