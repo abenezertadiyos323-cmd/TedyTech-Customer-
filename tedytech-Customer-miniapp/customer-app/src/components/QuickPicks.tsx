@@ -1,4 +1,4 @@
-import { Smartphone, Crown, Sparkles, Headphones } from 'lucide-react';
+import { Crown, Sparkles, Headphones } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
 
@@ -6,30 +6,23 @@ export function QuickPicks() {
   const { quickPickMode, setQuickPickMode } = useApp();
 
   const picks = [
-    { 
-      id: 'all', 
-      label: 'All Phones', 
-      icon: Smartphone,
-      action: () => setQuickPickMode('all'),
-      isActive: quickPickMode === 'all'
-    },
-    { 
-      id: 'arrivals', 
-      label: 'New Arrivals', 
+    {
+      id: 'arrivals',
+      label: 'New Arrivals',
       icon: Sparkles,
       action: () => setQuickPickMode('arrivals'),
       isActive: quickPickMode === 'arrivals'
     },
-    { 
-      id: 'accessories', 
-      label: 'Accessories', 
+    {
+      id: 'accessories',
+      label: 'Accessories',
       icon: Headphones,
       action: () => setQuickPickMode('accessories'),
       isActive: quickPickMode === 'accessories'
     },
-    { 
-      id: 'premium', 
-      label: 'Premium Picks', 
+    {
+      id: 'premium',
+      label: 'Premium Picks',
       icon: Crown,
       action: () => setQuickPickMode('premium'),
       isActive: quickPickMode === 'premium'

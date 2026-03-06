@@ -45,8 +45,14 @@ export function FilterBar({ onOpenBrandFilter, onOpenBudgetFilter, onOpenAllFilt
           )}
         >
           <Tag className="w-3.5 h-3.5" />
-          <span>Brand</span>
-          {selectedBrands.length > 0 && (
+          <span>
+            {selectedBrands.length === 1
+              ? selectedBrands[0]
+              : selectedBrands.length > 1
+              ? `${selectedBrands[0]} +${selectedBrands.length - 1}`
+              : "Brand"}
+          </span>
+          {selectedBrands.length > 1 && (
             <span className="ml-0.5 px-1.5 py-0.5 bg-primary-foreground/20 rounded-full text-xs">
               {selectedBrands.length}
             </span>
@@ -63,7 +69,7 @@ export function FilterBar({ onOpenBrandFilter, onOpenBudgetFilter, onOpenAllFilt
           )}
         >
           <SlidersHorizontal className="w-3.5 h-3.5" />
-          <span>Budget</span>
+          <span>{budgetLabel ?? "Budget"}</span>
         </button>
 
         {hasActiveFilters && (

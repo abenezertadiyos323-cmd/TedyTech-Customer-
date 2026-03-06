@@ -6,7 +6,6 @@ import { mapToProductVM } from '@/lib/mapProduct';
 
 interface ProductGridProps {
   newArrivals?: Phone[];
-  popularPhones?: Phone[];
   premiumPicks?: Phone[];
   accessories?: Phone[];
   allPhones?: Phone[];
@@ -14,14 +13,13 @@ interface ProductGridProps {
   onProductClick: (phone: Phone) => void;
 }
 
-export function ProductGrid({ 
-  newArrivals = [], 
-  popularPhones = [],
-  premiumPicks = [], 
+export function ProductGrid({
+  newArrivals = [],
+  premiumPicks = [],
   accessories = [],
   allPhones = [],
   isLoading = false,
-  onProductClick 
+  onProductClick
 }: ProductGridProps) {
   const { quickPickMode } = useApp();
 
@@ -30,47 +28,6 @@ export function ProductGrid({
       <div className="flex flex-col items-center justify-center py-12 text-center animate-fade-in min-h-[600px]">
         <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
         <p className="text-sm text-muted-foreground">Loading phones...</p>
-      </div>
-    );
-  }
-
-  // Home mode: show New Arrivals + Popular Phones only
-  if (quickPickMode === 'home') {
-    return (
-      <div className="space-y-6 min-h-[600px]">
-        {/* New Arrivals Section */}
-        {newArrivals.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-foreground animate-slide-in-left">New Arrivals</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {newArrivals.slice(0, 6).map((phone, index) => (
-                <ProductCard 
-                  key={phone.id} 
-                  product={mapToProductVM(phone as unknown as Record<string, unknown>)}
-                  onClick={() => onProductClick(phone)}
-                  index={index}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Popular Phones Section */}
-        {popularPhones.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-foreground animate-slide-in-left">Popular Phones</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {popularPhones.slice(0, 6).map((phone, index) => (
-                <ProductCard 
-                  key={phone.id} 
-                  product={mapToProductVM(phone as unknown as Record<string, unknown>)}
-                  onClick={() => onProductClick(phone)}
-                  index={index + newArrivals.length}
-                />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -93,10 +50,9 @@ export function ProductGrid({
       sectionTitle = 'Accessories';
       break;
     case 'all':
+    case 'home':
     default:
-      displayPhones = allPhones.length > 0 ? allPhones : [...newArrivals, ...popularPhones, ...premiumPicks].filter((phone, index, self) => 
-        index === self.findIndex(p => p.id === phone.id)
-      );
+      displayPhones = allPhones;
       sectionTitle = 'All Phones';
       break;
   }

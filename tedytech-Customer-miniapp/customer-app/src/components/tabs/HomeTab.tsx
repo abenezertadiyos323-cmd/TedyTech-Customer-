@@ -8,7 +8,6 @@ import { ProductGrid } from "../ProductGrid";
 import { useApp } from "@/contexts/AppContext";
 import {
   useNewArrivals,
-  usePopularPhones,
   usePremiumPicks,
   useAccessories,
   useBrowsePhones,
@@ -52,8 +51,6 @@ export function HomeTab({
   // Use favoritePhoneIds length from AppContext (single session source of truth)
   const favorites = favoritePhoneIds;
   const { data: newArrivals = [], isLoading: loadingNew } = useNewArrivals(10);
-  const { data: popularPhones = [], isLoading: loadingPopular } =
-    usePopularPhones(10);
   const { data: premiumPicks = [], isLoading: loadingPremium } =
     usePremiumPicks(10);
   const { data: accessories = [], isLoading: loadingAccessories } =
@@ -183,7 +180,6 @@ export function HomeTab({
         <div ref={productGridRef}>
           <ProductGrid
             newArrivals={newArrivals}
-            popularPhones={popularPhones}
             premiumPicks={premiumPicks}
             accessories={accessories}
             allPhones={allPhones}

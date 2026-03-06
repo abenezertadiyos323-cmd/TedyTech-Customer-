@@ -310,7 +310,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [quickPickMode, setQuickPickMode] = useState<
     "home" | "all" | "arrivals" | "premium" | "accessories"
-  >("home");
+  >("all");
   const [targetExchangePhone, setTargetExchangePhone] = useState<Phone | null>(
     null,
   );
@@ -585,11 +585,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSelectedStorageFilters([]);
     setSelectedConditions([]);
     setSortOption("newest");
-    setQuickPickMode("home");
+    setQuickPickMode("all");
   };
 
   const resetToDefaultHome = () => {
-    setQuickPickMode("home");
+    setQuickPickMode("all");
     setSearchQuery("");
   };
 
