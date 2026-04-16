@@ -13,7 +13,7 @@ import {
   useBrowsePhones,
 } from "@/hooks/usePhones";
 import type { Phone } from "@/types/phone";
-import tedMobileLogo from "@/assets/ted-mobile-logo-88.webp";
+import mickyMobileLogo from "@/assets/micky-mobile-brand-logo.png";
 import { mapToProductVM, type ProductVM } from "@/lib/mapProduct";
 import type { LeadSourceTab } from "@/hooks/usePhoneActions";
 
@@ -126,7 +126,7 @@ export function HomeTab({
       <header className="fixed top-0 left-0 right-0 z-40 bg-background/80 backdrop-blur-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-foreground">TEDYTECH™</h1>
+            <h1 className="text-xl font-bold text-foreground">Micky Mobile™</h1>
             <p className="text-xs text-muted-foreground">
               We sell, buy and exchange.
             </p>
@@ -148,21 +148,21 @@ export function HomeTab({
             {/* Logo Button */}
             <button
               onClick={onNavigateToAbout}
-              className="w-11 h-11 rounded-xl overflow-hidden flex items-center justify-center bg-transparent transition-transform duration-200 hover:scale-110 active:scale-95"
+              className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center bg-white transition-transform duration-200 hover:scale-110 active:scale-95 shadow-sm"
             >
               <img
-                src={tedMobileLogo}
-                alt="TED MOBILE"
-                width={44}
-                height={44}
-                className="w-full h-full object-contain bg-transparent"
+                src={mickyMobileLogo}
+                alt="Micky Mobile"
+                width={48}
+                height={48}
+                className="w-full h-full object-contain"
               />
             </button>
           </div>
         </div>
       </header>
 
-      <main className="p-4 space-y-5 pt-20">
+      <main className="p-4 space-y-5 pt-20 pb-6">
         <SearchBar
           onOpenFilters={() => setAllFiltersOpen(true)}
           onSelectPhone={(phone: Phone) => handlePhoneClick(phone)}
