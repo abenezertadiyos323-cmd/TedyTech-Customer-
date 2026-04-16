@@ -25,13 +25,14 @@ export function ProductCard({ product, onClick, index = 0 }: ProductCardProps) {
   return (
     <div
       className={cn(
-        "bg-card rounded-2xl overflow-hidden card-shadow hover-lift cursor-pointer group opacity-0 animate-fade-in flex flex-col",
+        "bg-card rounded-2xl card-shadow hover-lift cursor-pointer group opacity-0 animate-fade-in flex flex-col",
         `stagger-${Math.min(index + 1, 6)}`,
       )}
       style={{ animationFillMode: "forwards" }}
       onClick={onClick}
     >
-      <div className="relative aspect-square bg-muted overflow-hidden">
+      {/* Image section — overflow-hidden scoped here only, for zoom effect + rounding */}
+      <div className="relative aspect-square bg-muted overflow-hidden rounded-t-2xl shrink-0">
         <img
           src={product.imageUrl}
           alt={product.title}
@@ -61,23 +62,18 @@ export function ProductCard({ product, onClick, index = 0 }: ProductCardProps) {
         </button>
       </div>
 
-      <div className="p-3 flex flex-col flex-1">
-        <h3 className="font-medium text-foreground text-xs leading-tight mb-2 line-clamp-2">
+      {/* Content section — no overflow-hidden so price is never clipped */}
+      <div className="p-3 flex flex-col gap-1 rounded-b-2xl">
+        <h3 className="font-medium text-foreground text-xs leading-tight line-clamp-2">
           {product.title}
         </h3>
-        <div className="space-y-1">
-          {product.storageGb && (
-            <div className="inline-block">
-              <span className="text-xs bg-muted/60 text-muted-foreground px-2 py-1 rounded-md font-medium">
-                {product.storageGb}GB
-              </span>
-            </div>
-          )}
-          <p className="text-xs text-muted-foreground">
-            {product.condition}
-          </p>
-        </div>
-        <p className="text-foreground text-base font-bold mt-auto pt-1">
+        {(product.storageLabel || product.storageGb) && (
+          <span className="inline-block text-xs bg-muted/60 text-muted-foreground px-2 py-0.5 rounded-md font-medium w-fit">
+            {product.storageLabel || `${product.storageGb}GB`}
+          </span>
+        )}
+        <p className="text-xs text-muted-foreground">{product.condition}</p>
+        <p className="text-foreground text-sm font-bold pt-0.5">
           {product.priceBirr.toLocaleString()} Birr
         </p>
       </div>

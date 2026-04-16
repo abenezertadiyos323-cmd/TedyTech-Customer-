@@ -176,7 +176,7 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
   const specs = rawPhone?.key_specs as Record<string, string> | null;
 
   return (
-    <div className="min-h-screen bg-background pb-64 animate-slide-in-right">
+    <div className="min-h-screen bg-background animate-slide-in-right">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border">
         <div className="flex items-center justify-between p-4">
@@ -259,7 +259,7 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
 
       {/* Content */}
       <div className="p-4 space-y-5">
-        {/* 1. Phone Name + Price */}
+        {/* 1. Phone Name + Price (Auto-Updates with Variant!) */}
         <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <h2 className="text-xl font-bold text-foreground mb-1">{displayName}</h2>
           <p className="text-2xl font-bold text-primary">{formatPrice(currentPrice)}</p>
@@ -270,12 +270,35 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
           )}
         </div>
 
-        {/* 3. Quick Info Badges — only render when at least one badge has data */}
-        {(rawPhone?.storage_gb || product.condition) && (
+        {/* 2. Dynamic Storage Variant Picker */}
+        {uniqueStorages.length > 1 && (
+          <div className="animate-fade-in" style={{ animationDelay: '0.15s' }}>
+             <h3 className="text-sm font-semibold mb-2">Select Storage Capacity</h3>
+             <div className="flex flex-wrap gap-2">
+               {uniqueStorages.map(storage => (
+                 <button
+                   key={storage}
+                   onClick={() => setSelectedStorage(storage)}
+                   className={cn(
+                     "px-4 py-2 rounded-xl text-sm font-semibold transition-all border",
+                     selectedStorage === storage
+                       ? "bg-primary text-primary-foreground border-primary"
+                       : "bg-muted border-border text-foreground hover:bg-muted/80"
+                   )}
+                 >
+                   {storage}GB
+                 </button>
+               ))}
+             </div>
+          </div>
+        )}
+
+        {/* 3. Quick Info Badges */}
+        {(selectedStorage || product.condition) && (
           <div className="flex flex-wrap gap-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            {rawPhone?.storage_gb && (
+            {selectedStorage && (
               <span className="inline-block bg-primary/15 text-primary px-3 py-1.5 rounded-lg text-sm font-medium">
-                {rawPhone.storage_gb}GB Storage
+                {selectedStorage}GB Storage
               </span>
             )}
             {product.condition && (
@@ -299,18 +322,18 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
         {/* 5. Specifications */}
         {rawPhone && (
           (() => {
-            const storageDisplay = rawPhone?.storage_gb ? `${rawPhone.storage_gb}GB` : undefined;
+            const isIphone = rawPhone.brand?.toLowerCase() === 'apple' || rawPhone.brand?.toLowerCase() === 'iphone';
+            const isSamsung = rawPhone.brand?.toLowerCase() === 'samsung';
+            const currentRam = currentVariant?.ram || rawPhone.ram;
+
             const specsRows = [
-              { label: 'Storage', value: storageDisplay },
-              { label: 'RAM', value: rawPhone?.ram },
-              { label: 'Color', value: rawPhone?.color },
-              { label: 'Screen Size', value: rawPhone?.screenSize },
-              { label: 'Battery', value: rawPhone?.battery },
-              { label: 'Main Camera', value: rawPhone?.mainCamera },
-              { label: 'Selfie Camera', value: rawPhone?.selfieCamera },
-              { label: 'SIM Type', value: rawPhone?.simType },
-              { label: 'Operating System', value: rawPhone?.operatingSystem },
-            ].filter(s => s.value);
+              { label: 'Storage', value: selectedStorage ? `${selectedStorage}GB` : (rawPhone.storage_gb ? `${rawPhone.storage_gb}GB` : undefined) },
+              isSamsung ? { label: 'RAM', value: currentRam } : null,
+              isIphone ? { label: 'Battery Health', value: (rawPhone as any).batteryHealth } : null,
+              isIphone ? { label: 'Model Origin', value: (rawPhone as any).modelOrigin } : null,
+              isSamsung ? { label: 'Network', value: (rawPhone as any).network } : null,
+              { label: 'SIM Type', value: rawPhone.simType },
+            ].filter((s): s is {label: string, value: string} => Boolean(s && s.value));
 
             return specsRows.length > 0 && (
               <div className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
@@ -328,31 +351,7 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
           })()
         )}
 
-        {/* 6. Features */}
-        {rawPhone?.features && (() => {
-          const featureLines = rawPhone.features
-            .split("\n")
-            .map((l) => l.trim())
-            .filter(Boolean);
-          if (featureLines.length === 0) return null;
-          return (
-            <div className="animate-fade-in" style={{ animationDelay: '0.45s' }}>
-              <h3 className="font-semibold text-foreground mb-2">Features</h3>
-              {featureLines.length > 1 ? (
-                <ul className="space-y-1.5 list-none">
-                  {featureLines.map((line, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <span className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0" />
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground leading-relaxed">{featureLines[0]}</p>
-              )}
-            </div>
-          );
-        })()}
+
 
         {/* Key Highlights */}
         {highlights.length > 0 && (
@@ -374,26 +373,7 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
           </div>
         )}
 
-        {/* Key Specs */}
-        {specs && Object.keys(specs).length > 0 && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.55s' }}>
-            <h3 className="font-semibold text-foreground mb-3">Key Specs</h3>
-            <ul className="space-y-2">
-              {Object.entries(specs).map(([key, value], index) => (
-                <li
-                  key={key}
-                  className="flex items-start gap-2 opacity-0 animate-fade-in"
-                  style={{ animationDelay: `${0.6 + index * 0.05}s`, animationFillMode: 'forwards' }}
-                >
-                  <span className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0" />
-                  <span className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">{key}:</span> {value}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+
 
         {/* Description */}
         {rawPhone?.description && (() => {
@@ -401,7 +381,6 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
             .split('\n')
             .map(l => l.trim())
             .filter(Boolean);
-          // Detect if the description is a dash/bullet list (admin typed "- X" style)
           const isList = lines.length > 1 && lines.every(l => /^[-•*]/.test(l));
           const cleanLines = isList
             ? lines.map(l => l.replace(/^[-•*]\s*/, ''))
@@ -453,10 +432,6 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
           </button>
         )}
 
-        {rawPhone?.exchange_available && (
-          <p className="text-center text-[10px] text-muted-foreground">
-            Exchange available. Final offer confirmed after inspection.
-          </p>
         )}
       </div>
     </div>

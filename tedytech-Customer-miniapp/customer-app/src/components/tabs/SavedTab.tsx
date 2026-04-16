@@ -77,9 +77,9 @@ export function SavedTab({ onNavigateToExchange }: SavedTabProps) {
   const isLoading = favoritesLoading || productsLoading;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="p-4">
+        <div className="p-4 pb-6">
           <h1 className="text-xl font-bold text-foreground">Saved Phones</h1>
           <p className="text-sm text-muted-foreground">
             {savedProducts.length} {savedProducts.length === 1 ? "item" : "items"} saved
