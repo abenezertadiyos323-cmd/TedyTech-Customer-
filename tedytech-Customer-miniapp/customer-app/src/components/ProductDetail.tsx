@@ -431,8 +431,6 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
             <span>Exchange</span>
           </button>
         )}
-
-        )}
       </div>
     </div>
   );
