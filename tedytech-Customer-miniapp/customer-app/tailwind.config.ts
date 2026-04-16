@@ -191,6 +191,5 @@ export default {
       },
     },
   },
-*** End Patch
   plugins: [require("tailwindcss-animate")],
 } satisfies Config;

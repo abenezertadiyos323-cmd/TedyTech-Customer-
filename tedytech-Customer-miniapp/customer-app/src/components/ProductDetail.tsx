@@ -2,7 +2,11 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { ArrowLeft, Heart, ShoppingBag, RefreshCw, Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { usePhoneDetail } from '@/hooks/usePhones';
-import { useCreatePhoneAction, type LeadSourceTab } from '@/hooks/usePhoneActions';
+import {
+  useCreatePhoneAction,
+  useTelegramStartLinkBuilder,
+  type LeadSourceTab,
+} from '@/hooks/usePhoneActions';
 import { cn } from '@/lib/utils';
 import type { Phone } from '@/types/phone';
 import { formatPrice, getConditionLabel } from '@/types/phone';
@@ -21,57 +25,53 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
   const { toggleSaved, isSaved, setTargetExchangePhone, sessionId } = useApp();
   const { data: phoneDetail, isLoading } = usePhoneDetail(phoneId);
   const createPhoneAction = useCreatePhoneAction(sessionId);
+  const { openStartLink } = useTelegramStartLinkBuilder();
 
-  const rawPhone: Phone | null =
+  // Extend Phone to accept any new dynamic properties
+  const rawPhone = (
     phoneDetail?.phone ??
-    (initialProduct ? productVMToPhone(initialProduct) : null);
+    (initialProduct ? productVMToPhone(initialProduct) : null)
+  ) as Phone & Record<string, any> | null;
+  
   const product: ProductVM | null = rawPhone
     ? mapToProductVM(rawPhone as unknown as Record<string, unknown>)
     : initialProduct ?? null;
+    
   const images = phoneDetail?.images || [];
   const variants = phoneDetail?.variants || [];
 
-  // Get unique colors and storage options from variants
-  const uniqueColors = useMemo(() => {
-    const colors = [...new Set(variants.map(v => v.color))];
-    return colors.length > 0 ? colors : (rawPhone?.color ? [rawPhone.color] : ['Default']);
-  }, [variants, rawPhone?.color]);
-
   const uniqueStorages = useMemo(() => {
-    const storages = [...new Set(variants.map(v => v.storage_gb))].sort((a, b) => a - b);
-    return storages.length > 0 ? storages : (rawPhone?.storage_gb ? [rawPhone.storage_gb] : []);
+    const storages = [...new Set(variants.map((v: any) => v.storage))].filter(Boolean) as string[];
+    return storages.length > 0 ? storages : (rawPhone?.storage_gb ? [`${rawPhone.storage_gb}GB`] : []);
   }, [variants, rawPhone?.storage_gb]);
 
-  const [selectedColor, setSelectedColor] = useState(uniqueColors[0] || 'Default');
-  const [selectedStorage, setSelectedStorage] = useState<number | null>(null);
+  const [selectedStorage, setSelectedStorage] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isHeartAnimating, setIsHeartAnimating] = useState(false);
+  const [isOpeningTelegram, setIsOpeningTelegram] = useState(false);
   const [imageDirection, setImageDirection] = useState<'left' | 'right'>('right');
 
-  // Set default storage when variants load
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   useEffect(() => {
     if (uniqueStorages.length > 0 && selectedStorage === null) {
-      const defaultVariant = variants.find(v => v.is_default);
-      setSelectedStorage(defaultVariant?.storage_gb || uniqueStorages[0]);
+      setSelectedStorage(uniqueStorages[0]);
     }
-  }, [uniqueStorages, variants, selectedStorage]);
+  }, [uniqueStorages, selectedStorage]);
 
   const saved = product ? isSaved(product.id) : false;
 
-  // Find current variant based on selection
   const currentVariant = useMemo(() => {
-    return variants.find(v =>
-      v.color === selectedColor && v.storage_gb === selectedStorage
-    ) || variants.find(v => v.storage_gb === selectedStorage) || variants[0];
-  }, [variants, selectedColor, selectedStorage]);
+    return variants.find((v: any) => v.storage === selectedStorage) || variants[0];
+  }, [variants, selectedStorage]);
 
-  // Calculate current price
   const currentPrice = useMemo(() => {
-    if (currentVariant?.price_birr) return currentVariant.price_birr;
+    if (currentVariant?.price) return currentVariant.price;
     return product?.priceBirr || 0;
   }, [currentVariant, product?.priceBirr]);
 
-  // Image gallery - use detail images or fallback to main image
   const imageUrls = useMemo(() => {
     if (images.length > 0) {
       return images.map(img => img.image_url);
@@ -91,7 +91,6 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
     setCurrentImageIndex((prev) => (prev - 1 + imageUrls.length) % imageUrls.length);
   };
 
-  // Touch swipe support for image gallery
   const touchStartX = useRef<number | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -102,7 +101,7 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
     if (touchStartX.current === null) return;
     const delta = e.changedTouches[0].clientX - touchStartX.current;
     touchStartX.current = null;
-    if (Math.abs(delta) < 40) return; // ignore tiny movements
+    if (Math.abs(delta) < 40) return; 
     if (delta > 0) prevImage();
     else nextImage();
   };
@@ -120,38 +119,45 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
     onExchange();
   };
 
-  // Generate dynamic item ID for Telegram deep link
-  const generateItemId = (item: ProductVM, storage: number | null): string => {
+  const generateItemId = (item: ProductVM, storage: string | null): string => {
     const brand = item.brand.toLowerCase().replace(/\s+/g, '_');
     const model = item.model.toLowerCase().replace(/\s+/g, '_');
-    const storageStr = storage ? `_${storage}gb` : '';
+    const storageStr = storage ? `_${storage.toLowerCase()}` : '';
     return `${brand}_${model}${storageStr}`;
   };
 
-  /**
-   * P0: Log the lead action FIRST, then redirect to Telegram.
-   * The Convex document ID is used as the start param so the bot
-   * can look up the lead immediately on message receipt.
-   */
-  const handleStartInquiry = async () => {
-    if (!product) return;
+  const handleContextualStartInquiry = async () => {
+    if (!product || isOpeningTelegram) return;
+
+    const productLabel = [
+      product.brand,
+      product.model,
+      selectedStorage,
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    setIsOpeningTelegram(true);
 
     try {
-      const leadId = await createPhoneAction.mutate({
+      await createPhoneAction.mutate({
         actionType: 'inquiry',
         sourceTab,
         sourceProductId: product.id,
         timestamp: Date.now(),
+        showErrorToast: false,
       });
-
-      const deepLink = `https://t.me/${storeConfig.botUsername}?start=${storeConfig.telegramStartPrefix}${leadId}`;
-      window.open(deepLink, '_blank');
     } catch {
-      // Error already toasted inside useCreatePhoneAction — nothing to do here.
-      // Fallback: open bot without a start param so the user isn't blocked.
-      const itemId = generateItemId(product, selectedStorage);
-      window.open(`https://t.me/${storeConfig.botUsername}?start=item_${itemId}`, '_blank');
+      // Analytics offline
     }
+
+    await openStartLink({
+      actionType: 'ask',
+      productId: product.id,
+      productLabel,
+    });
+
+    setTimeout(() => setIsOpeningTelegram(false), 500);
   };
 
   if (!product && isLoading) {
@@ -173,10 +179,9 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
 
   const displayName = product.title;
   const highlights = rawPhone?.key_highlights || [];
-  const specs = rawPhone?.key_specs as Record<string, string> | null;
 
   return (
-    <div className="min-h-screen bg-background animate-slide-in-right">
+    <div className="min-h-screen bg-background pb-48 animate-slide-in-right">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border">
         <div className="flex items-center justify-between p-4">
@@ -217,7 +222,6 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
           onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }}
         />
 
-        {/* Navigation Arrows */}
         {imageUrls.length > 1 && (
           <>
             <button
@@ -235,7 +239,6 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
           </>
         )}
 
-        {/* Image Indicators */}
         {imageUrls.length > 1 && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
             {imageUrls.map((_, index) => (
@@ -259,6 +262,7 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
 
       {/* Content */}
       <div className="p-4 space-y-5">
+        
         {/* 1. Phone Name + Price (Auto-Updates with Variant!) */}
         <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <h2 className="text-xl font-bold text-foreground mb-1">{displayName}</h2>
@@ -269,7 +273,7 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
             </p>
           )}
         </div>
-
+        
         {/* 2. Dynamic Storage Variant Picker */}
         {uniqueStorages.length > 1 && (
           <div className="animate-fade-in" style={{ animationDelay: '0.15s' }}>
@@ -281,38 +285,19 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
                    onClick={() => setSelectedStorage(storage)}
                    className={cn(
                      "px-4 py-2 rounded-xl text-sm font-semibold transition-all border",
-                     selectedStorage === storage
-                       ? "bg-primary text-primary-foreground border-primary"
-                       : "bg-muted border-border text-foreground hover:bg-muted/80"
+                     selectedStorage === storage 
+                       ? "bg-primary text-primary-foreground border-primary" 
+                       : "bg-surface-2 border-border text-foreground hover:bg-surface-3"
                    )}
                  >
-                   {storage}GB
+                   {storage}
                  </button>
                ))}
              </div>
           </div>
         )}
 
-        {/* 3. Quick Info Badges */}
-        {(selectedStorage || product.condition) && (
-          <div className="flex flex-wrap gap-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            {selectedStorage && (
-              <span className="inline-block bg-primary/15 text-primary px-3 py-1.5 rounded-lg text-sm font-medium">
-                {selectedStorage}GB Storage
-              </span>
-            )}
-            {product.condition && (
-              <span className={cn(
-                "inline-block px-3 py-1.5 rounded-lg text-sm font-medium",
-                product.condition.toLowerCase() === 'new' ? "bg-success/20 text-success" : "bg-muted text-muted-foreground"
-              )}>
-                {getConditionLabel(product.condition)}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* 4. Exchange Availability — only shown when exchange is available */}
+        {/* 4. Exchange Availability */}
         {rawPhone?.exchange_available === true && (
           <p className="text-sm text-success font-medium animate-fade-in" style={{ animationDelay: '0.25s' }}>
             Exchange available
@@ -325,13 +310,14 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
             const isIphone = rawPhone.brand?.toLowerCase() === 'apple' || rawPhone.brand?.toLowerCase() === 'iphone';
             const isSamsung = rawPhone.brand?.toLowerCase() === 'samsung';
             const currentRam = currentVariant?.ram || rawPhone.ram;
-
+            
             const specsRows = [
-              { label: 'Storage', value: selectedStorage ? `${selectedStorage}GB` : (rawPhone.storage_gb ? `${rawPhone.storage_gb}GB` : undefined) },
+              { label: 'Condition', value: product.condition ? getConditionLabel(product.condition) : undefined },
+              { label: 'Storage', value: selectedStorage || (rawPhone.storage_gb ? `${rawPhone.storage_gb}GB` : undefined) },
               isSamsung ? { label: 'RAM', value: currentRam } : null,
-              isIphone ? { label: 'Battery Health', value: (rawPhone as any).batteryHealth } : null,
-              isIphone ? { label: 'Model Origin', value: (rawPhone as any).modelOrigin } : null,
-              isSamsung ? { label: 'Network', value: (rawPhone as any).network } : null,
+              isIphone ? { label: 'Battery Health', value: rawPhone.batteryHealth } : null,
+              isIphone ? { label: 'Model Origin', value: rawPhone.modelOrigin } : null,
+              isSamsung ? { label: 'Network', value: rawPhone.network } : null,
               { label: 'SIM Type', value: rawPhone.simType },
             ].filter((s): s is {label: string, value: string} => Boolean(s && s.value));
 
@@ -351,8 +337,6 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
           })()
         )}
 
-
-
         {/* Key Highlights */}
         {highlights.length > 0 && (
           <div className="bg-surface-section rounded-2xl p-4 border border-border animate-fade-in hover-lift" style={{ animationDelay: '0.5s' }}>
@@ -365,15 +349,15 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
                   className="flex items-start gap-2 opacity-0 animate-fade-in"
                   style={{ animationDelay: `${0.55 + index * 0.05}s`, animationFillMode: 'forwards' }}
                 >
-                  <Check className="w-4 h-4 text-success mt-0.5 flex-shrink-0" />
+                  <span className="w-4 h-4 text-success mt-0.5 flex-shrink-0">
+                    <Check className="w-full h-full" />
+                  </span>
                   <span className="text-sm text-foreground">{highlight}</span>
                 </li>
               ))}
             </ul>
           </div>
         )}
-
-
 
         {/* Description */}
         {rawPhone?.description && (() => {
@@ -410,11 +394,11 @@ export function ProductDetail({ phoneId, product: initialProduct, onBack, onExch
       {/* Bottom Actions */}
       <div className="fixed left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border p-4 pb-5 space-y-2 animate-slide-up z-40" style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}>
         <button
-          onClick={handleStartInquiry}
-          disabled={createPhoneAction.isPending}
+          onClick={handleContextualStartInquiry}
+          disabled={createPhoneAction.isPending || isOpeningTelegram}
           className="w-full py-2.5 bg-primary text-primary-foreground font-medium text-sm rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-all duration-300 shadow-button press-effect hover-glow disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          {createPhoneAction.isPending ? (
+          {createPhoneAction.isPending || isOpeningTelegram ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <ShoppingBag className="w-4 h-4" />

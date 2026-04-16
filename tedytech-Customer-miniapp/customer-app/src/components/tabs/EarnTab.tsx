@@ -374,7 +374,7 @@ function EarnTabInner() {
           <p className="text-xs text-muted-foreground/40 mt-1">Build: a2bb76c7</p>
         </div>
 
-        {/* Debug panel — hidden unless ?debug=1 or localStorage TEDY_DEBUG=1 */}
+        {/* Debug panel — hidden unless ?debug=1 or localStorage MICKY_MOBILE_DEBUG=1 */}
         <ReferralDebugPanel />
       </div>
 

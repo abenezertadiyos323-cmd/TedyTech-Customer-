@@ -77,8 +77,8 @@ export function SavedTab({ onNavigateToExchange }: SavedTabProps) {
   const isLoading = favoritesLoading || productsLoading;
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
+    <div className="min-h-screen bg-background pb-24">
+      <header className="fixed top-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="p-4 pb-6">
           <h1 className="text-xl font-bold text-foreground">Saved Phones</h1>
           <p className="text-sm text-muted-foreground">
@@ -87,7 +87,7 @@ export function SavedTab({ onNavigateToExchange }: SavedTabProps) {
         </div>
       </header>
 
-      <div className="p-4">
+      <div className="p-4 pt-24">
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />

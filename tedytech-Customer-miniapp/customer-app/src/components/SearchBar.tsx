@@ -33,7 +33,7 @@ export function SearchBar({ onOpenFilters, onSelectPhone }: SearchBarProps) {
 
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
-      const saved = localStorage.getItem("tedytech-recent-searches");
+      const saved = localStorage.getItem("tedy_mobile_recent_searches");
       if (!saved) return [];
       const parsed = JSON.parse(saved);
       if (
@@ -140,7 +140,7 @@ export function SearchBar({ onOpenFilters, onSelectPhone }: SearchBarProps) {
       5,
     );
     setRecentSearches(updated);
-    localStorage.setItem("tedytech-recent-searches", JSON.stringify(updated));
+    localStorage.setItem("tedy_mobile_recent_searches", JSON.stringify(updated));
   };
 
   const handleSearchTermClick = (term: string) => {

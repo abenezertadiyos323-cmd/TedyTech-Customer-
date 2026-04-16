@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { MapPin, Phone, Navigation, CheckCircle, Clock, DollarSign } from 'lucide-react';
-import tedMobileLogo from '@/assets/ted-mobile-logo-88.webp';
+import tedyTechLogo from '@/assets/ted-mobile-logo.png';
 import { storeConfig } from '@/config/storeConfig';
 import { useApp } from '@/contexts/AppContext';
 import { useCreatePhoneAction } from '@/hooks/usePhoneActions';
@@ -58,7 +58,7 @@ const faqItems: FaqItem[] = [
     content:
       "We deliver within Addis Ababa.\n\n• Same-day pickup available at our store.\n• Home delivery within 24 hours (fee varies by location).\n• We partner with trusted local couriers.\n• Prefer in-person? Visit us at Bole — opposite the school, Alemnesch Plaza 014.",
     contentAm:
-      "አዲስ አበባ ውስጥ እናደርሳለን።\n\n• በዕለቱ ከሱቃችን መረከብ (Pickup) ይቻላል።\n• በ24 ሰዓት ውስጥ የቤት ለቤት አቅርቦት (የማድረሻ ክፍያ እንደ ቦታው ይለያያል)።\n• ከታማኝ የሀገር ውስጥ መላላኪያዎች ጋር እንሰራለን።\n• በአካል መገኘት ይመርጣሉ? ቦሌ — አለምነሽ ፕላዛ (Alemnesh Plaza) 014 በሚገኘው TEDMOBILE (ቴድ ሞባይል) ሱቃችን ይጎብኙን።",
+      "አዲስ አበባ ውስጥ እናደርሳለን።\n\n• በዕለቱ ከሱቃችን መረከብ (Pickup) ይቻላል።\n• በ24 ሰዓት ውስጥ የቤት ለቤት አቅርቦት (የማድረሻ ክፍያ እንደ ቦታው ይለያያል)።\n• ከታማኝ የሀገር ውስጥ መላላኪያዎች ጋር እንሰራለን።\n• በአካል መገኘት ይመርጣሉ? ቦሌ — አለምነሽ ፕላዛ (Alemnesh Plaza) 014 በሚገኘው TedyTech ሱቃችን ይጎብኙን።",
   },
   {
     id: 'item-4',
@@ -190,7 +190,7 @@ export function AboutTab({ onNavigateToExchange }: AboutTabProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border">
         <div className="p-4 animate-slide-down">
@@ -203,7 +203,7 @@ export function AboutTab({ onNavigateToExchange }: AboutTabProps) {
         {/* Brand Header */}
         <div className="text-center space-y-3 animate-fade-in">
           <div className="w-20 h-20 mx-auto rounded-2xl overflow-hidden flex items-center justify-center shadow-lg animate-bounce-in hover-glow">
-            <img src={tedMobileLogo} alt="TED MOBILE" className="w-full h-full object-cover" />
+            <img src={tedyTechLogo} alt="TedyTech" className="w-full h-full object-cover" />
           </div>
           <div>
             <h2 className="text-2xl font-bold text-foreground">TEDYTECH™</h2>

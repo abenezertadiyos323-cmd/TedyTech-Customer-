@@ -7,16 +7,16 @@ import { api } from "@/convex_generated/api";
 import { useApp } from "@/contexts/AppContext";
 import { toast } from "sonner";
 
-// Debug: active when ?debug=1 or localStorage TEDY_DEBUG=1.
+// Debug: active when ?debug=1 or localStorage TEDY_TECH_DEBUG=1.
 const _IS_DEBUG: boolean = (() => {
   if (typeof window === "undefined") return false;
   try {
     if (new URLSearchParams(window.location.search).get("debug") === "1") return true;
-    if (localStorage.getItem("TEDY_DEBUG") === "1") return true;
+    if (localStorage.getItem("TEDY_TECH_DEBUG") === "1") return true;
   } catch { /* ignore */ }
   return false;
 })();
-const STATS_DEBUG_KEY = "TEDY_STATS_DEBUG_LAST";
+const STATS_DEBUG_KEY = "TEDY_TECH_STATS_DEBUG_LAST";
 // Developer Telegram ID — auto-toasts visible only to this account.
 const DEV_TG_ID = 8319120114;
 
@@ -74,9 +74,6 @@ export function useAffiliate() {
 
   // ── New: referral-table stats (populated by Telegram bot tracking) ────────
   // Smoke-check: only fire the query when telegramId is a confirmed positive integer.
-  // Using an explicit type+range guard (not just truthiness) prevents passing 0, NaN,
-  // or any non-number value, which would trigger a Convex argument-validation error
-  // and crash the Telegram mini app.
   const referralStatsData = useConvexQuery(
     api.affiliates.getUserReferralStats,
     typeof telegramId === "number" && telegramId > 0
@@ -88,7 +85,6 @@ export function useAffiliate() {
     typeof v === "number" && isFinite(v) ? v : 0;
 
   // Merge commissions (legacy manual entries) with referrals table stats.
-  // Referrals-table values take precedence when non-zero.
   const commissionTotal = commissions.reduce(
     (sum, c) => sum + safeNum(c.commissionAmount),
     0,
@@ -169,8 +165,6 @@ export function useAffiliate() {
 
 /**
  * Hook to get or create an affiliate record using telegramUserId directly.
- * Does NOT require verifiedCustomerId — fires as soon as telegramUser is available.
- * Replaces the old useCreateAffiliate which required customerId from background verification.
  */
 export function useCreateAffiliate() {
   const { telegramUser } = useApp();
@@ -195,11 +189,6 @@ export function useCreateAffiliate() {
     },
   };
 }
-
-// ---------------------------------------------------------------------------
-// Shared context — Index.tsx calls useAffiliate() once, stores the result
-// here, and EarnTab consumes it without opening a second subscription.
-// ---------------------------------------------------------------------------
 
 export type AffiliateState = ReturnType<typeof useAffiliate>;
 

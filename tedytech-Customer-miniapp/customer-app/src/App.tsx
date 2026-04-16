@@ -29,9 +29,6 @@ const Router = HashRouter;
 
 // Silently normalises any unexpected hash that Telegram may open with
 // (e.g. "#/earn", "#/start") to "#/" so the app always starts at Home.
-// Runs exactly once on mount via replace so the browser history stays clean.
-// Main-URL query params (Telegram's ?start_param etc.) are before the hash
-// and are unaffected by this change.
 function HashNormalizer() {
   const navigate = useNavigate();
   useEffect(() => {

@@ -72,7 +72,7 @@ const IS_DEBUG =
   (typeof window !== "undefined" &&
     (() => {
       try {
-        return localStorage.getItem("TEDY_DEBUG") === "1";
+        return localStorage.getItem("TEDY_TECH_DEBUG") === "1";
       } catch {
         return false;
       }
@@ -97,7 +97,7 @@ const TG_USER_STORAGE_KEY = "tg_user_id";
 // Stores the ?ref= referral code from the URL across the session until auth resolves.
 const REF_STORAGE_KEY = "tedytech_ref";
 // localStorage key for referral-flow debug snapshot (always written, read by ReferralDebugPanel).
-const REF_DEBUG_KEY = "TEDY_REF_DEBUG_LAST";
+const REF_DEBUG_KEY = "TEDY_TECH_REF_DEBUG_LAST";
 // Developer Telegram ID — auto-toasts visible only to this account, no flag needed.
 const DEV_TG_ID = 8319120114;
 
@@ -511,15 +511,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }));
         } catch { /* ignore */ }
 
-        // Dev-only: show capture result immediately (no flag needed, only for DEV_TG_ID).
-        if (tgUser?.id === DEV_TG_ID) {
-          toast.info(
-            _dbgMutationTriggered
-              ? `Ref captured: ${_dbgRefSource} | code: ${refCode}`
-              : `Ref: no code found (source: ${_dbgRefSource})`,
-            { duration: 7000 },
-          );
-        }
+        // Dev-only: show capture result immediately
+        // Removed annoyting toasts requested by user
 
         if (_dbgMutationTriggered) {
           console.log("[TedyTech] applying referral", { refCode, referredId: tgUser!.id });
@@ -532,9 +525,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 const prev = JSON.parse(localStorage.getItem(REF_DEBUG_KEY) ?? "{}") as Record<string, unknown>;
                 localStorage.setItem(REF_DEBUG_KEY, JSON.stringify({ ...prev, referralMutationResult: "success", referralMutationError: "" }));
               } catch { /* ignore */ }
-              if (tgUser?.id === DEV_TG_ID) {
-                toast.success(`Mutation: success | code: ${refCode}`, { duration: 9000 });
-              }
             })
             .catch((err: unknown) => {
               /* non-fatal — server guards prevent double-apply */
@@ -543,9 +533,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 const prev = JSON.parse(localStorage.getItem(REF_DEBUG_KEY) ?? "{}") as Record<string, unknown>;
                 localStorage.setItem(REF_DEBUG_KEY, JSON.stringify({ ...prev, referralMutationResult: "error", referralMutationError: errMsg.slice(0, 120) }));
               } catch { /* ignore */ }
-              if (tgUser?.id === DEV_TG_ID) {
-                toast.error(`Mutation: error | ${errMsg.slice(0, 80)}`, { duration: 12000 });
-              }
             })
             .finally(() => {
               // Clear after attempt regardless of result.
@@ -672,4 +659,3 @@ export function useApp() {
   }
   return context;
 }
-

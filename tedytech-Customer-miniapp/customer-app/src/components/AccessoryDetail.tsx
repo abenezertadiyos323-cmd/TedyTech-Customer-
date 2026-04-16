@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ArrowLeft, ShoppingBag, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Accessory, formatPrice } from '@/data/products';
+import { useTelegramStartLinkBuilder } from '@/hooks/usePhoneActions';
 import { cn } from '@/lib/utils';
 
 interface AccessoryDetailProps {
@@ -10,8 +11,10 @@ interface AccessoryDetailProps {
 
 export function AccessoryDetail({ accessory, onBack }: AccessoryDetailProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isOpeningTelegram, setIsOpeningTelegram] = useState(false);
   const [imageDirection, setImageDirection] = useState<'left' | 'right'>('right');
-  
+  const { openStartLink } = useTelegramStartLinkBuilder();
+
   const images = accessory.images.length > 0 ? accessory.images : [accessory.image];
 
   const nextImage = () => {
@@ -22,6 +25,17 @@ export function AccessoryDetail({ accessory, onBack }: AccessoryDetailProps) {
   const prevImage = () => {
     setImageDirection('left');
     setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+  };
+
+  const handleStartInquiry = async () => {
+    if (isOpeningTelegram) return;
+
+    setIsOpeningTelegram(true);
+    await openStartLink({
+      actionType: 'ask',
+      productLabel: accessory.name,
+    });
+    setTimeout(() => setIsOpeningTelegram(false), 500);
   };
 
   return (
@@ -36,7 +50,7 @@ export function AccessoryDetail({ accessory, onBack }: AccessoryDetailProps) {
             <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
           <h1 className="font-semibold text-foreground animate-fade-in">Details</h1>
-          <div className="w-9" /> {/* Spacer for centering */}
+          <div className="w-9" />
         </div>
       </div>
 
@@ -47,12 +61,11 @@ export function AccessoryDetail({ accessory, onBack }: AccessoryDetailProps) {
           src={images[currentImageIndex]}
           alt={accessory.name}
           className={cn(
-            "w-full h-full object-cover",
-            imageDirection === 'right' ? "animate-slide-in-left" : "animate-slide-in-right"
+            'w-full h-full object-cover',
+            imageDirection === 'right' ? 'animate-slide-in-left' : 'animate-slide-in-right'
           )}
         />
-        
-        {/* Navigation Arrows */}
+
         {images.length > 1 && (
           <>
             <button
@@ -69,13 +82,11 @@ export function AccessoryDetail({ accessory, onBack }: AccessoryDetailProps) {
             </button>
           </>
         )}
-        
-        {/* Category Badge */}
+
         <span className="absolute top-4 left-4 px-3 py-1.5 bg-secondary text-secondary-foreground text-sm font-medium rounded-lg">
           {accessory.category}
         </span>
-        
-        {/* Image Indicators */}
+
         {images.length > 1 && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
             {images.map((_, index) => (
@@ -86,10 +97,10 @@ export function AccessoryDetail({ accessory, onBack }: AccessoryDetailProps) {
                   setCurrentImageIndex(index);
                 }}
                 className={cn(
-                  "h-2 rounded-full transition-all duration-300",
-                  index === currentImageIndex 
-                    ? "bg-primary w-6" 
-                    : "bg-card/60 w-2 hover:bg-card/80"
+                  'h-2 rounded-full transition-all duration-300',
+                  index === currentImageIndex
+                    ? 'bg-primary w-6'
+                    : 'bg-card/60 w-2 hover:bg-card/80'
                 )}
               />
             ))}
@@ -99,7 +110,6 @@ export function AccessoryDetail({ accessory, onBack }: AccessoryDetailProps) {
 
       {/* Content */}
       <div className="p-4 space-y-6">
-        {/* Title & Price */}
         <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <h2 className="text-2xl font-bold text-foreground mb-1">{accessory.name}</h2>
           <p className="text-2xl font-bold text-primary mb-4">{formatPrice(accessory.price)}</p>
@@ -107,10 +117,17 @@ export function AccessoryDetail({ accessory, onBack }: AccessoryDetailProps) {
         </div>
       </div>
 
-      {/* Bottom Actions - fixed above bottom nav with same styling as ProductDetail */}
       <div className="fixed left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border p-4 pb-5 space-y-2 animate-slide-up z-40" style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom, 0px))' }}>
-        <button className="w-full py-3.5 bg-primary text-primary-foreground font-semibold rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-all duration-300 shadow-button press-effect hover-glow">
-          <ShoppingBag className="w-5 h-5" />
+        <button
+          onClick={handleStartInquiry}
+          disabled={isOpeningTelegram}
+          className="w-full py-3.5 bg-primary text-primary-foreground font-semibold rounded-2xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-all duration-300 shadow-button press-effect hover-glow disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+          {isOpeningTelegram ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <ShoppingBag className="w-5 h-5" />
+          )}
           <span>ጠይቀው ይዘዙ</span>
         </button>
       </div>
